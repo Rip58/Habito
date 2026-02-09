@@ -4,7 +4,7 @@ export interface ActivityLog {
   id: string;
   timestamp: string;
   eventName: string;
-  category: 'Infrastructure' | 'Security' | 'Data' | 'API' | 'Coding' | 'Fitness';
+  category: 'Infraestructura' | 'Seguridad' | 'Datos' | 'API' | 'Programación' | 'Fitness';
   intensity: number; // 0-100
   status: 'COMPLETED' | 'PENDING' | 'FAILED';
 }

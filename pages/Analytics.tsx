@@ -9,18 +9,18 @@ export const Analytics: React.FC = () => {
 
   // Mock data for charts
   const weeklyData = [
-    { name: 'Mon', current: 40, prev: 24 },
-    { name: 'Tue', current: 30, prev: 13 },
-    { name: 'Wed', current: 55, prev: 40 },
-    { name: 'Thu', current: 45, prev: 35 },
-    { name: 'Fri', current: 20, prev: 15 },
-    { name: 'Sat', current: 10, prev: 5 },
-    { name: 'Sun', current: 5, prev: 2 },
+    { name: 'Lun', current: 40, prev: 24 },
+    { name: 'Mar', current: 30, prev: 13 },
+    { name: 'Mié', current: 55, prev: 40 },
+    { name: 'Jue', current: 45, prev: 35 },
+    { name: 'Vie', current: 20, prev: 15 },
+    { name: 'Sáb', current: 10, prev: 5 },
+    { name: 'Dom', current: 5, prev: 2 },
   ];
 
   const monthlyData = [
     { name: 'Jul', sessions: 200 },
-    { name: 'Aug', sessions: 350 },
+    { name: 'Ago', sessions: 350 },
     { name: 'Sep', sessions: 400 },
     { name: 'Oct', sessions: 600 },
   ];
@@ -28,20 +28,20 @@ export const Analytics: React.FC = () => {
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
         <header className="flex justify-between items-center mb-8">
-            <h1 className="text-2xl font-bold text-white">Detailed Analytics</h1>
+            <h1 className="text-2xl font-bold text-white">Análisis Detallado</h1>
             <div className="flex gap-4">
-                 <button className="bg-primary/10 text-primary px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/20 transition-colors">Last 12 Months</button>
-                 <button className="bg-primary text-bg-dark font-bold px-4 py-2 rounded-lg text-sm hover:opacity-90 transition-opacity">Export Report</button>
+                 <button className="bg-primary/10 text-primary px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/20 transition-colors">Últimos 12 Meses</button>
+                 <button className="bg-primary text-bg-dark font-bold px-4 py-2 rounded-lg text-sm hover:opacity-90 transition-opacity">Exportar Reporte</button>
             </div>
         </header>
 
         {/* Top Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
              {[
-                { label: 'Total Activations', val: '124,892', trend: '12%', up: true },
-                { label: 'Peak Day', val: 'Tuesday', sub: 'Avg 4.2k' },
-                { label: 'Active Streak', val: '18 Days', sub: 'On fire!' },
-                { label: 'Success Rate', val: '99.4%', sub: 'Stable' },
+                { label: 'Activaciones Totales', val: '124,892', trend: '12%', up: true },
+                { label: 'Día Pico', val: 'Martes', sub: 'Prom 4.2k' },
+                { label: 'Racha Activa', val: '18 Días', sub: '¡En racha!' },
+                { label: 'Tasa de Éxito', val: '99.4%', sub: 'Estable' },
              ].map((stat, i) => (
                 <div key={i} className="bg-bg-card p-5 rounded-xl border border-white/5 shadow-sm">
                     <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">{stat.label}</p>
@@ -54,7 +54,7 @@ export const Analytics: React.FC = () => {
              ))}
         </div>
 
-        <Heatmap data={data} title="Yearly Activation Intensity" />
+        <Heatmap data={data} title="Intensidad Anual" />
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -62,8 +62,8 @@ export const Analytics: React.FC = () => {
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                      <div className="bg-bg-card p-6 rounded-xl border border-white/5 shadow-sm">
                          <div className="mb-6">
-                            <h3 className="font-bold text-white text-md">Week-over-Week</h3>
-                            <p className="text-xs text-text-muted">Comparing current vs previous 7 days</p>
+                            <h3 className="font-bold text-white text-md">Semana a Semana</h3>
+                            <p className="text-xs text-text-muted">Comparando actuales vs 7 días previos</p>
                          </div>
                          <div className="h-48">
                              <ResponsiveContainer width="100%" height="100%">
@@ -79,8 +79,8 @@ export const Analytics: React.FC = () => {
 
                      <div className="bg-bg-card p-6 rounded-xl border border-white/5 shadow-sm">
                          <div className="mb-6">
-                            <h3 className="font-bold text-white text-md">Monthly Trend</h3>
-                            <p className="text-xs text-text-muted">Active sessions per month</p>
+                            <h3 className="font-bold text-white text-md">Tendencia Mensual</h3>
+                            <p className="text-xs text-text-muted">Sesiones activas por mes</p>
                          </div>
                          <div className="h-48">
                              <ResponsiveContainer width="100%" height="100%">
@@ -107,9 +107,9 @@ export const Analytics: React.FC = () => {
                      <div className="p-6 border-b border-white/5">
                          <div className="flex items-center gap-2 mb-1">
                              <TrendingUp className="text-primary" size={20} />
-                             <h3 className="font-bold text-white">Smart Insights</h3>
+                             <h3 className="font-bold text-white">Insights Inteligentes</h3>
                          </div>
-                         <p className="text-xs text-text-muted">AI-generated activity observations</p>
+                         <p className="text-xs text-text-muted">Observaciones generadas por IA</p>
                      </div>
                      <div className="p-6 space-y-6 flex-1">
                          <div className="flex gap-4">
@@ -117,8 +117,8 @@ export const Analytics: React.FC = () => {
                                  <ArrowUpRight className="text-primary" size={16} />
                              </div>
                              <div>
-                                 <h4 className="text-sm font-bold text-white mb-1">Monthly Growth</h4>
-                                 <p className="text-xs text-text-muted leading-relaxed">Your overall activity increased by <span className="text-primary font-bold">15%</span> compared to last month.</p>
+                                 <h4 className="text-sm font-bold text-white mb-1">Crecimiento Mensual</h4>
+                                 <p className="text-xs text-text-muted leading-relaxed">Tu actividad general incrementó en un <span className="text-primary font-bold">15%</span> comparado al mes anterior.</p>
                              </div>
                          </div>
                          <div className="flex gap-4">
@@ -126,8 +126,8 @@ export const Analytics: React.FC = () => {
                                  <Clock className="text-blue-500" size={16} />
                              </div>
                              <div>
-                                 <h4 className="text-sm font-bold text-white mb-1">Peak Productivity</h4>
-                                 <p className="text-xs text-text-muted leading-relaxed">Most events are triggered between <span className="text-white">9:00 AM - 11:30 AM</span>.</p>
+                                 <h4 className="text-sm font-bold text-white mb-1">Pico de Productividad</h4>
+                                 <p className="text-xs text-text-muted leading-relaxed">La mayoría de eventos ocurren entre <span className="text-white">9:00 AM - 11:30 AM</span>.</p>
                              </div>
                          </div>
                          <div className="flex gap-4">
@@ -135,14 +135,14 @@ export const Analytics: React.FC = () => {
                                  <AlertTriangle className="text-yellow-500" size={16} />
                              </div>
                              <div>
-                                 <h4 className="text-sm font-bold text-white mb-1">Error Anomaly</h4>
-                                 <p className="text-xs text-text-muted leading-relaxed">Detected a <span className="text-yellow-500">4% spike</span> in API timeout errors on Wednesdays.</p>
+                                 <h4 className="text-sm font-bold text-white mb-1">Anomalía de Error</h4>
+                                 <p className="text-xs text-text-muted leading-relaxed">Detectado un <span className="text-yellow-500">pico del 4%</span> en errores de API los miércoles.</p>
                              </div>
                          </div>
                      </div>
                      <div className="p-4 border-t border-white/5">
                         <button className="w-full py-3 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold transition-colors">
-                            VIEW FULL REPORT
+                            VER REPORTE COMPLETO
                         </button>
                      </div>
                  </div>

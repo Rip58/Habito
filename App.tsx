@@ -21,8 +21,8 @@ const App: React.FC = () => {
         return (
           <div className="flex items-center justify-center h-full text-text-muted">
             <div className="text-center">
-                <h2 className="text-2xl font-bold mb-2">Coming Soon</h2>
-                <p>The {currentPage} page is under construction.</p>
+                <h2 className="text-2xl font-bold mb-2">Próximamente</h2>
+                <p>La página {currentPage} está en construcción.</p>
             </div>
           </div>
         );

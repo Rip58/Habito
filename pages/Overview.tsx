@@ -16,20 +16,20 @@ export const Overview: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
          <div>
-            <h1 className="text-2xl font-bold text-white">Activity Overview</h1>
-            <p className="text-text-muted">Welcome back, Alex.</p>
+            <h1 className="text-2xl font-bold text-white">Resumen de Actividad</h1>
+            <p className="text-text-muted">Bienvenido de nuevo, Alex.</p>
          </div>
          <div className="flex items-center gap-4">
              <div className="hidden md:flex items-center bg-white/5 rounded-lg px-3 py-2 gap-2 border border-white/5">
                 <Calendar size={16} className="text-text-muted" />
-                <span className="text-sm font-medium text-slate-300">Jan 1, 2024 - Dec 31, 2024</span>
+                <span className="text-sm font-medium text-slate-300">1 Ene, 2024 - 31 Dic, 2024</span>
              </div>
              <button 
                 onClick={() => setIsLogModalOpen(true)}
                 className="bg-primary text-bg-dark font-bold px-4 py-2 rounded-lg text-sm hover:bg-primary-hover transition-colors flex items-center gap-2"
              >
                 <Plus size={18} />
-                Log Event
+                Registrar Evento
              </button>
          </div>
       </div>
@@ -40,8 +40,8 @@ export const Overview: React.FC = () => {
         <div className="xl:col-span-3 space-y-8">
             <Heatmap 
                 data={heatmapData} 
-                title="Activity Log" 
-                subtitle="Real-time daily activation density throughout the year" 
+                title="Registro de Actividad" 
+                subtitle="Densidad diaria de activación en tiempo real durante el año" 
             />
             <LogTable logs={recentLogs} />
         </div>
@@ -50,13 +50,13 @@ export const Overview: React.FC = () => {
         <div className="xl:col-span-1 space-y-8">
              {/* Breakdown Widget */}
              <div className="bg-bg-card p-6 rounded-2xl border border-white/5">
-                <h3 className="font-bold text-sm uppercase tracking-widest text-text-muted mb-6">Activity Breakdown</h3>
+                <h3 className="font-bold text-sm uppercase tracking-widest text-text-muted mb-6">Desglose de Actividad</h3>
                 <div className="space-y-6">
                     {[
-                        { label: 'Infrastructure', val: 42, color: 'bg-primary' },
-                        { label: 'API Hooks', val: 28, color: 'bg-primary/60' },
-                        { label: 'User Interactions', val: 15, color: 'bg-primary/40' },
-                        { label: 'Others', val: 15, color: 'bg-primary/20' },
+                        { label: 'Infraestructura', val: 42, color: 'bg-primary' },
+                        { label: 'Hooks de API', val: 28, color: 'bg-primary/60' },
+                        { label: 'Interacciones de Usuario', val: 15, color: 'bg-primary/40' },
+                        { label: 'Otros', val: 15, color: 'bg-primary/20' },
                     ].map((item, i) => (
                         <div key={i} className="space-y-2">
                              <div className="flex justify-between text-xs font-semibold text-slate-300">
@@ -74,8 +74,8 @@ export const Overview: React.FC = () => {
              {/* Goal Widget */}
              <div className="bg-primary/10 rounded-2xl p-6 border border-primary/20 relative overflow-hidden">
                  <div className="relative z-10">
-                    <h4 className="font-bold text-primary mb-2">Weekly Goal</h4>
-                    <p className="text-xs text-slate-400 mb-4">You have reached 84% of your weekly activation target.</p>
+                    <h4 className="font-bold text-primary mb-2">Meta Semanal</h4>
+                    <p className="text-xs text-slate-400 mb-4">Has alcanzado el 84% de tu objetivo de activación semanal.</p>
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full border-4 border-primary border-r-transparent flex items-center justify-center text-xs font-bold text-white">
                             84%
@@ -89,26 +89,26 @@ export const Overview: React.FC = () => {
 
              {/* System Health */}
              <div>
-                <h3 className="font-bold text-sm uppercase tracking-widest text-text-muted mb-4">System Health</h3>
+                <h3 className="font-bold text-sm uppercase tracking-widest text-text-muted mb-4">Estado del Sistema</h3>
                 <div className="flex items-center gap-4 p-4 rounded-xl bg-bg-card border border-white/5">
                     <CheckCircle className="text-primary" size={24} />
                     <div>
-                        <p className="text-sm font-bold text-white">All nodes active</p>
-                        <p className="text-[10px] text-text-muted">Last health check: 2m ago</p>
+                        <p className="text-sm font-bold text-white">Todos los nodos activos</p>
+                        <p className="text-[10px] text-text-muted">Última comprobación: hace 2m</p>
                     </div>
                 </div>
              </div>
         </div>
       </div>
 
-      <Modal isOpen={isLogModalOpen} onClose={() => setIsLogModalOpen(false)} title="Log Activity">
+      <Modal isOpen={isLogModalOpen} onClose={() => setIsLogModalOpen(false)} title="Registrar Actividad">
           <div className="space-y-8">
               <div className="space-y-2">
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-widest">Date</label>
+                  <label className="block text-xs font-bold text-text-muted uppercase tracking-widest">Fecha</label>
                   <div className="relative">
                       <input 
                         type="text" 
-                        defaultValue="Today, Oct 24 2023"
+                        defaultValue="Hoy, 24 Oct 2023"
                         className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
                       />
                       <Calendar className="absolute right-3 top-3 text-text-muted" size={18} />
@@ -116,17 +116,17 @@ export const Overview: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-widest">Event Category</label>
+                  <label className="block text-xs font-bold text-text-muted uppercase tracking-widest">Categoría del Evento</label>
                   <select className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all appearance-none">
-                      <option>Coding session</option>
-                      <option>Exercise / Fitness</option>
-                      <option>Reading</option>
-                      <option>Meditation</option>
+                      <option>Sesión de código</option>
+                      <option>Ejercicio / Fitness</option>
+                      <option>Lectura</option>
+                      <option>Meditación</option>
                   </select>
               </div>
 
               <div className="space-y-2">
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-widest">Activations</label>
+                  <label className="block text-xs font-bold text-text-muted uppercase tracking-widest">Activaciones</label>
                   <div className="flex items-center gap-3">
                       <button 
                         onClick={() => setCount(Math.max(1, count - 1))}
@@ -147,14 +147,14 @@ export const Overview: React.FC = () => {
                           +
                       </button>
                   </div>
-                  <p className="text-[11px] text-text-muted mt-1 italic">How many times did you complete this today?</p>
+                  <p className="text-[11px] text-text-muted mt-1 italic">¿Cuántas veces completaste esto hoy?</p>
               </div>
 
               <div className="space-y-2">
-                  <label className="block text-xs font-bold text-text-muted uppercase tracking-widest">Notes (Optional)</label>
+                  <label className="block text-xs font-bold text-text-muted uppercase tracking-widest">Notas (Opcional)</label>
                   <textarea 
                      className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all resize-none"
-                     placeholder="Brief details about the session..."
+                     placeholder="Breves detalles sobre la sesión..."
                      rows={4}
                   ></textarea>
               </div>
@@ -164,16 +164,16 @@ export const Overview: React.FC = () => {
                       <Info className="text-primary" size={20} />
                   </div>
                   <p className="text-xs leading-relaxed text-slate-400">
-                      Logging this activity will increase your weekly consistency score by <span className="text-primary font-bold">4.2%</span> and extend your streak.
+                      Registrar esta actividad incrementará tu consistencia semanal en un <span className="text-primary font-bold">4.2%</span> y extenderá tu racha.
                   </p>
               </div>
 
               <div className="pt-4 border-t border-white/10 flex items-center gap-3">
                   <button onClick={() => setIsLogModalOpen(false)} className="flex-1 py-3.5 bg-primary text-bg-dark font-bold rounded-xl text-sm hover:opacity-90 transition-all">
-                      Log Event
+                      Registrar
                   </button>
                   <button onClick={() => setIsLogModalOpen(false)} className="px-6 py-3.5 border border-white/10 rounded-xl text-sm font-medium text-white hover:bg-white/5 transition-colors">
-                      Cancel
+                      Cancelar
                   </button>
               </div>
           </div>

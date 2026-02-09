@@ -23,12 +23,12 @@ export const Settings: React.FC = () => {
     <div className="p-8 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
        <header className="flex justify-between items-end mb-8">
            <div>
-               <h1 className="text-2xl font-bold text-white mb-2">Event Category Settings</h1>
-               <p className="text-text-muted">Manage your tracking categories and visualization preferences.</p>
+               <h1 className="text-2xl font-bold text-white mb-2">Configuración de Categorías</h1>
+               <p className="text-text-muted">Gestiona tus categorías de seguimiento y preferencias de visualización.</p>
            </div>
            <button className="bg-primary hover:bg-primary-hover text-bg-dark font-semibold px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-lg shadow-primary/10">
                <Plus size={18} />
-               Create Category
+               Crear Categoría
            </button>
        </header>
 
@@ -42,10 +42,10 @@ export const Settings: React.FC = () => {
                        <div>
                            <h3 className="font-semibold text-lg text-white">{cat.name}</h3>
                            <div className="flex items-center gap-3 mt-1">
-                               <span className="text-xs px-2 py-0.5 bg-white/10 rounded text-slate-300">Target: {cat.target}</span>
+                               <span className="text-xs px-2 py-0.5 bg-white/10 rounded text-slate-300">Objetivo: {cat.target}</span>
                                <span className="flex items-center gap-1 text-xs text-text-muted">
                                    {cat.enabled ? <Bell size={12} /> : <BellOff size={12} />}
-                                   {cat.enabled ? 'Enabled' : 'Disabled'}
+                                   {cat.enabled ? 'Habilitado' : 'Deshabilitado'}
                                </span>
                            </div>
                        </div>
@@ -73,10 +73,10 @@ export const Settings: React.FC = () => {
 
        {/* Edit Modal (simulated inline if using standard Modal component, here specific) */}
        {editingCategory && (
-           <Modal isOpen={true} onClose={() => setEditingCategory(null)} title={`Edit Category: ${editingCategory.name}`}>
+           <Modal isOpen={true} onClose={() => setEditingCategory(null)} title={`Editar Categoría: ${editingCategory.name}`}>
                <div className="space-y-6">
                    <div>
-                       <label className="block text-sm font-medium text-text-muted mb-2">Category Name</label>
+                       <label className="block text-sm font-medium text-text-muted mb-2">Nombre de Categoría</label>
                        <input 
                          type="text" 
                          value={editingCategory.name}
@@ -86,7 +86,7 @@ export const Settings: React.FC = () => {
                    </div>
                    
                    <div>
-                        <label className="block text-sm font-medium text-text-muted mb-2">Daily Goal</label>
+                        <label className="block text-sm font-medium text-text-muted mb-2">Meta Diaria</label>
                         <div className="flex gap-3">
                             <input 
                                 type="text"
@@ -100,8 +100,8 @@ export const Settings: React.FC = () => {
                    <div className="space-y-4 pt-4 border-t border-white/10">
                         <div className="flex items-center justify-between">
                             <div>
-                                <span className="block font-medium text-white">Notifications</span>
-                                <span className="text-sm text-text-muted">Receive alerts to reach your goal</span>
+                                <span className="block font-medium text-white">Notificaciones</span>
+                                <span className="text-sm text-text-muted">Recibir alertas para alcanzar tu meta</span>
                             </div>
                             <button 
                                 onClick={() => setEditingCategory({...editingCategory, enabled: !editingCategory.enabled})}
@@ -113,7 +113,7 @@ export const Settings: React.FC = () => {
                    </div>
 
                    <div>
-                       <label className="block text-sm font-medium text-text-muted mb-2">Heatmap Color</label>
+                       <label className="block text-sm font-medium text-text-muted mb-2">Color del Mapa de Calor</label>
                        <div className="flex items-center gap-4 p-4 bg-bg-dark border border-white/10 rounded-xl">
                             <div className="w-10 h-10 rounded-lg cursor-pointer ring-2 ring-white/20" style={{ backgroundColor: editingCategory.color }}></div>
                             <input 
@@ -136,8 +136,8 @@ export const Settings: React.FC = () => {
                    </div>
 
                    <div className="pt-6 flex justify-end gap-3">
-                       <button onClick={() => setEditingCategory(null)} className="px-5 py-2 rounded-lg text-text-muted hover:text-white font-medium transition-colors">Cancel</button>
-                       <button onClick={handleSave} className="bg-primary hover:bg-primary-hover text-bg-dark font-bold px-6 py-2 rounded-lg transition-all">Save Changes</button>
+                       <button onClick={() => setEditingCategory(null)} className="px-5 py-2 rounded-lg text-text-muted hover:text-white font-medium transition-colors">Cancelar</button>
+                       <button onClick={handleSave} className="bg-primary hover:bg-primary-hover text-bg-dark font-bold px-6 py-2 rounded-lg transition-all">Guardar Cambios</button>
                    </div>
                </div>
            </Modal>
@@ -146,8 +146,8 @@ export const Settings: React.FC = () => {
        <div className="mt-10 p-6 rounded-xl border border-dashed border-white/10 flex items-start gap-4">
            <Lightbulb className="text-primary" size={24} />
            <div>
-               <h4 className="font-semibold text-sm text-white">Pro Tip</h4>
-               <p className="text-sm text-text-muted mt-1">Consistency is key! Set smaller targets initially and gradually increase them as you build momentum.</p>
+               <h4 className="font-semibold text-sm text-white">Consejo Pro</h4>
+               <p className="text-sm text-text-muted mt-1">¡La consistencia es clave! Establece objetivos pequeños inicialmente y auméntalos gradualmente a medida que construyes impulso.</p>
            </div>
        </div>
     </div>

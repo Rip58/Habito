@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, BarChart2, Layers, Bell, Settings, Users, Zap } from 'lucide-react';
+import { LayoutDashboard, BarChart2, Layers, Bell, Settings, Zap } from 'lucide-react';
 import { Page } from '../types';
 
 interface SidebarProps {
@@ -9,10 +9,10 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => {
   const navItems = [
-    { id: Page.OVERVIEW, label: 'Overview', icon: <LayoutDashboard size={20} /> },
-    { id: Page.ANALYTICS, label: 'Deep Analytics', icon: <BarChart2 size={20} /> },
-    { id: Page.LOGS, label: 'Event Logs', icon: <Layers size={20} /> },
-    { id: Page.ALERTS, label: 'Alerts', icon: <Bell size={20} /> },
+    { id: Page.OVERVIEW, label: 'Resumen', icon: <LayoutDashboard size={20} /> },
+    { id: Page.ANALYTICS, label: 'Análisis Detallado', icon: <BarChart2 size={20} /> },
+    { id: Page.LOGS, label: 'Historial', icon: <Layers size={20} /> },
+    { id: Page.ALERTS, label: 'Alertas', icon: <Bell size={20} /> },
   ];
 
   return (
@@ -41,15 +41,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
         ))}
 
         <div className="pt-6 pb-2 px-3 text-xs font-bold text-text-muted/50 uppercase tracking-wider">
-          Workspace
+          Espacio de Trabajo
         </div>
 
-        <button
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:text-primary hover:bg-primary/5 transition-colors"
-        >
-          <Users size={20} />
-          Team Members
-        </button>
         <button
           onClick={() => onNavigate(Page.SETTINGS)}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
@@ -59,7 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
           }`}
         >
           <Settings size={20} />
-          Settings
+          Configuración
         </button>
       </nav>
 
@@ -70,7 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white truncate">Alex Rivers</p>
-            <p className="text-xs text-text-muted truncate">Pro Plan Member</p>
+            <p className="text-xs text-text-muted truncate">Miembro Pro Plan</p>
           </div>
         </div>
       </div>

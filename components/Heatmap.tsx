@@ -37,7 +37,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({ data, title, subtitle }) => {
           {subtitle && <p className="text-text-muted text-sm">{subtitle}</p>}
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-text-muted">Less</span>
+          <span className="text-xs text-text-muted">Menos</span>
           <div className="flex gap-1">
             <div className="w-3 h-3 bg-white/5 rounded-sm"></div>
             <div className="w-3 h-3 bg-primary/20 rounded-sm"></div>
@@ -45,7 +45,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({ data, title, subtitle }) => {
             <div className="w-3 h-3 bg-primary/70 rounded-sm"></div>
             <div className="w-3 h-3 bg-primary rounded-sm"></div>
           </div>
-          <span className="text-xs text-text-muted">More</span>
+          <span className="text-xs text-text-muted">Más</span>
         </div>
       </div>
 
@@ -58,7 +58,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({ data, title, subtitle }) => {
                 <div 
                   key={`${wIndex}-${dIndex}`}
                   className={`w-3 h-3 rounded-[2px] ${getColor(day.level)} hover:ring-1 hover:ring-white transition-all cursor-pointer`}
-                  title={`${day.date}: ${day.count} events`}
+                  title={`${day.date}: ${day.count} eventos`}
                 />
               ))}
             </div>
@@ -67,7 +67,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({ data, title, subtitle }) => {
         
         {/* Months labels could go here absolutely positioned or flexed, keeping it simple for now */}
         <div className="flex justify-between text-[10px] text-text-muted mt-2 px-1">
-            <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span>
+            <span>Ene</span><span>Feb</span><span>Mar</span><span>Abr</span><span>May</span><span>Jun</span><span>Jul</span><span>Ago</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dic</span>
         </div>
       </div>
     </div>

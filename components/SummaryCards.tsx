@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, Flame, CalendarCheck, ArrowUpRight } from 'lucide-react';
+import { Zap, Flame, CalendarCheck } from 'lucide-react';
 import { StatCardProps } from '../types';
 
 const Card: React.FC<StatCardProps & { colorClass: string }> = ({ title, value, subtext, icon, trend, trendUp, colorClass }) => (
@@ -26,24 +26,24 @@ export const SummaryCards: React.FC = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <Card
-        title="Total Activations"
+        title="Activaciones Totales"
         value="12,482"
-        trend="12% vs last month"
+        trend="12% vs mes anterior"
         trendUp={true}
         icon={<Zap size={20} className="text-primary" />}
         colorClass="bg-primary/20"
       />
       <Card
-        title="Current Streak"
-        value="15 Days"
-        subtext="Longest: 42 Days"
+        title="Racha Actual"
+        value="15 Días"
+        subtext="Mejor: 42 Días"
         icon={<Flame size={20} className="text-orange-500" />}
         colorClass="bg-orange-500/20"
       />
       <Card
-        title="Most Active Day"
-        value="Oct 12"
-        subtext="432 activations"
+        title="Día Más Activo"
+        value="12 Oct"
+        subtext="432 activaciones"
         icon={<CalendarCheck size={20} className="text-blue-500" />}
         colorClass="bg-blue-500/20"
       />

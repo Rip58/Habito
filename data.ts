@@ -25,15 +25,15 @@ export const generateHeatmapData = (): HeatmapDay[] => {
 };
 
 export const recentLogs: ActivityLog[] = [
-  { id: '1', timestamp: 'Oct 12, 14:23:01', eventName: 'System Optimization Burst', category: 'Infrastructure', intensity: 85, status: 'COMPLETED' },
-  { id: '2', timestamp: 'Oct 12, 11:45:12', eventName: 'User Authentication Spike', category: 'Security', intensity: 45, status: 'COMPLETED' },
-  { id: '3', timestamp: 'Oct 11, 23:59:44', eventName: 'Nightly Backup Sync', category: 'Data', intensity: 100, status: 'COMPLETED' },
-  { id: '4', timestamp: 'Oct 11, 18:12:05', eventName: 'Webhook Listener Trigger', category: 'API', intensity: 20, status: 'PENDING' },
-  { id: '5', timestamp: 'Oct 11, 09:30:00', eventName: 'Morning Routine Init', category: 'Fitness', intensity: 60, status: 'COMPLETED' },
+  { id: '1', timestamp: '12 Oct, 14:23:01', eventName: 'Optimización del Sistema', category: 'Infraestructura', intensity: 85, status: 'COMPLETED' },
+  { id: '2', timestamp: '12 Oct, 11:45:12', eventName: 'Pico de Autenticación de Usuarios', category: 'Seguridad', intensity: 45, status: 'COMPLETED' },
+  { id: '3', timestamp: '11 Oct, 23:59:44', eventName: 'Sincronización de Respaldo Nocturno', category: 'Datos', intensity: 100, status: 'COMPLETED' },
+  { id: '4', timestamp: '11 Oct, 18:12:05', eventName: 'Disparador de Webhook', category: 'API', intensity: 20, status: 'PENDING' },
+  { id: '5', timestamp: '11 Oct, 09:30:00', eventName: 'Rutina Matutina', category: 'Fitness', intensity: 60, status: 'COMPLETED' },
 ];
 
 export const initialCategories: Category[] = [
-  { id: '1', name: 'Daily Coding', target: '3 hours', enabled: true, color: '#30e87a' },
-  { id: '2', name: 'Exercise', target: '45 min', enabled: false, color: '#60a5fa' },
-  { id: '3', name: 'Reading', target: '1 session', enabled: true, color: '#f472b6' },
+  { id: '1', name: 'Programación Diaria', target: '3 horas', enabled: true, color: '#30e87a' },
+  { id: '2', name: 'Ejercicio', target: '45 min', enabled: false, color: '#60a5fa' },
+  { id: '3', name: 'Lectura', target: '1 sesión', enabled: true, color: '#f472b6' },
 ];
