@@ -59,13 +59,15 @@ export const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
                                 key={i}
                                 ref={el => inputRefs.current[i] = el}
                                 type="password"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 maxLength={1}
                                 value={pin[i]}
                                 onChange={(e) => handleChange(i, e.target.value)}
                                 onKeyDown={(e) => handleKeyDown(i, e)}
                                 className={`w-14 h-16 bg-bg-card border-2 rounded-xl text-center text-2xl font-bold text-white focus:outline-none transition-all ${error
-                                        ? 'border-red-500/50 focus:border-red-500'
-                                        : 'border-white/10 focus:border-primary focus:shadow-[0_0_20px_rgba(48,232,122,0.15)]'
+                                    ? 'border-red-500/50 focus:border-red-500'
+                                    : 'border-white/10 focus:border-primary focus:shadow-[0_0_20px_rgba(48,232,122,0.15)]'
                                     }`}
                             />
                         ))}
