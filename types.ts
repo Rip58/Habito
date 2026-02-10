@@ -1,10 +1,11 @@
 import React from 'react';
 
 export interface ActivityLog {
-  id: string;
+  id?: number; // Dexie auto-increment ID
   timestamp: string;
+  dateObj?: Date;
   eventName: string;
-  category: 'Infraestructura' | 'Seguridad' | 'Datos' | 'API' | 'Programación' | 'Fitness';
+  category: string;
   intensity: number; // 0-100
   status: 'COMPLETED' | 'PENDING' | 'FAILED';
 }

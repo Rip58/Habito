@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Category {
+  id      String  @id @default(cuid())
+  name    String  @unique
+  target  String  // e.g., "3 horas", "45 min"
+  enabled Boolean @default(true)
+  color   String  // Hex color code
+  logs    Log[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([enabled])
+  @@map("categories")
+}
+
+model Log {
+  id          String   @id @default(cuid())
+  timestamp   String   // ISO string format for compatibility
+  dateObj     DateTime // For querying and filtering
+  eventName   String
+  category    String   // Category name
+  categoryId  String   // Foreign key to Category
+  categoryRef Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  intensity   Int      @default(1) // 1-10 scale
+  status      String   @default("COMPLETED") // COMPLETED, PENDING, FAILED
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([dateObj])
+  @@index([category])
+  @@index([status])
+  @@index([categoryId])
+  @@map("logs")
+}
