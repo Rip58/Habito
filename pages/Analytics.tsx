@@ -55,7 +55,7 @@ export const Analytics: React.FC = () => {
         let maxCount = 0;
 
         for (const [day, count] of dayCounts.entries()) {
-            if (count & gt; maxCount) {
+            if (count > maxCount) {
                 maxCount = count;
                 const [y, m, d] = day.split('-');
                 const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
@@ -112,16 +112,16 @@ export const Analytics: React.FC = () => {
 
         const days: HeatmapDay[] = [];
         const today = new Date();
-        for (let i = 364; i & gt;= 0; i--) {
+        for (let i = 364; i >= 0; i--) {
             const d = new Date();
             d.setDate(today.getDate() - i);
             const dateStr = getLocalDateKey(d);
             const count = daysMap.get(dateStr) || 0;
             let level: 0 | 1 | 2 | 3 | 4 = 0;
-            if (count & gt; 0) level = 1;
-            if (count & gt; 3) level = 2;
-            if (count & gt; 7) level = 3;
-            if (count & gt; 10) level = 4;
+            if (count > 0) level = 1;
+            if (count > 3) level = 2;
+            if (count > 7) level = 3;
+            if (count > 10) level = 4;
             days.push({ date: dateStr, count, level });
         }
         return days;
