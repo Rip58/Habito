@@ -92,13 +92,13 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen font-sans text-white bg-bg-dark overflow-hidden">
+    <div className="flex flex-col h-screen font-sans text-white bg-bg-dark overflow-hidden max-w-full">
       {/* Reused "Sidebar" component is now the Top Navigation Bar for Desktop */}
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
 
       <MobileHeader />
 
-      <main className="flex-1 overflow-y-auto relative w-full pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(6rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-8">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden relative w-full max-w-full pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(6rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-8">
         {/* Background gradient effects */}
         <div className="fixed top-0 left-0 w-full h-96 bg-primary/5 rounded-full blur-[128px] pointer-events-none -z-10 translate-x-1/4 -translate-y-1/2"></div>
         {renderPage()}

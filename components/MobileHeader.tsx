@@ -4,7 +4,7 @@ import { Zap } from 'lucide-react';
 export const MobileHeader: React.FC = () => {
     return (
 
-        <header className="md:hidden sticky top-0 left-0 right-0 glass z-[60] px-4 py-3 flex items-center justify-between transition-all duration-300">
+        <header className="md:hidden sticky top-0 left-0 right-0 glass z-[60] px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] flex items-center justify-between transition-all duration-300">
             <div className="flex items-center gap-3">
                 <div className="relative group">
                     <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />

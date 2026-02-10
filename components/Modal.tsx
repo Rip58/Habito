@@ -15,14 +15,14 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
     <div className="fixed inset-0 z-50 flex items-center justify-center md:justify-end">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      
+
       {/* Panel */}
-      <aside className="relative w-full md:w-[480px] bg-bg-card h-full shadow-2xl flex flex-col border-l border-white/10 animate-in slide-in-from-right duration-300">
-        <div className="p-6 border-b border-white/10 flex items-center justify-between">
+      <aside className="relative w-full max-w-full md:w-[480px] bg-bg-card h-full shadow-2xl flex flex-col border-l border-white/10 animate-in slide-in-from-right duration-300 overflow-x-hidden">
+        <div className="p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] border-b border-white/10 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-white">{title}</h2>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors text-text-muted hover:text-white"
           >
