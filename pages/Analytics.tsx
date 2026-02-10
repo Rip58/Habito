@@ -1,39 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, BarChart, Bar } from 'recharts';
 import { Heatmap } from '../components/Heatmap';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
 import { HeatmapDay } from '../types';
+import { api, Log, Category } from '../lib/api';
 import { ArrowUpRight, TrendingUp, AlertTriangle, Clock, Zap, Flame, CalendarCheck } from 'lucide-react';
 
 export const Analytics: React.FC = () => {
     const [filterCategory, setFilterCategory] = useState<string>('all');
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [logs, setLogs] = useState<Log[]>([]);
 
-    // Fetch categories
-    const dbCategories = useLiveQuery(() => db.categories.toArray());
-    const categories = (dbCategories?.map(c => ({ ...c, id: String(c.id) }))) || [];
+    // Fetch data
+    useEffect(() => {
+        api.categories.getAll().then(setCategories).catch(console.error);
+    }, []);
+
+    useEffect(() => {
+        api.logs.getAll().then(setLogs).catch(console.error);
+    }, []);
 
     // Helper to get local YYYY-MM-DD
-    const getLocalDateKey = (date: Date) => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
+    const getLocalDateKey = (date: Date | string) => {
+        const d = typeof date === 'string' ? new Date(date) : date;
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     };
 
-    // Calculate statistics based on selected category
-    const stats = useLiveQuery(async() => {
-        let logs = await db.logs.toArray();
+    // Filter logs by category
+    const filteredLogs = filterCategory !== 'all'
+        ? logs.filter(log => log.category === filterCategory)
+        : logs;
 
-        // Filter by category if not 'all'
-        if (filterCategory !== 'all') {
-            logs = logs.filter(log => log.category === filterCategory);
-        }
+    // Calculate statistics
+    const stats = (() => {
+        const total = filteredLogs.length;
 
-        // Total events
-        const total = logs.length;
-
-        // Calculate days elapsed this year
+        // Days elapsed this year
         const now = new Date();
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         const daysElapsed = Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -42,7 +46,7 @@ export const Analytics: React.FC = () => {
         const dayCounts = new Map<string, number>();
         const uniqueDates = new Set<string>();
 
-        logs.forEach(log => {
+        filteredLogs.forEach(log => {
             if (log.dateObj) {
                 const key = getLocalDateKey(log.dateObj);
                 dayCounts.set(key, (dayCounts.get(key) || 0) + 1);
@@ -76,7 +80,7 @@ export const Analytics: React.FC = () => {
         } else {
             let currentCheckDate = new Date();
             if (!uniqueDates.has(todayKey)) {
-                currentCheckDate = yesterday;
+                currentCheckDate = new Date(yesterday);
             }
 
             while (true) {
@@ -91,19 +95,12 @@ export const Analytics: React.FC = () => {
         }
 
         return { total, maxDay, maxCount, streak, daysElapsed };
-    }, [filterCategory]) || { total: 0, maxDay: '-', maxCount: 0, streak: 0, daysElapsed: 1 };
+    })();
 
-    // Generate heatmap data from real logs
-    const data: HeatmapDay[] = useLiveQuery(async() => {
-        let allLogs = await db.logs.toArray();
-
-        // Filter by category if not 'all'
-        if (filterCategory !== 'all') {
-            allLogs = allLogs.filter(log => log.category === filterCategory);
-        }
-
+    // Generate heatmap data
+    const data: HeatmapDay[] = (() => {
         const daysMap = new Map<string, number>();
-        allLogs.forEach(log => {
+        filteredLogs.forEach(log => {
             if (log.dateObj) {
                 const dateKey = getLocalDateKey(log.dateObj);
                 daysMap.set(dateKey, (daysMap.get(dateKey) || 0) + 1);
@@ -125,7 +122,7 @@ export const Analytics: React.FC = () => {
             days.push({ date: dateStr, count, level });
         }
         return days;
-    }, [filterCategory]) || [];
+    })();
 
     // Mock data for charts (can be enhanced later with real data)
     const weeklyData = [
@@ -203,7 +200,7 @@ export const Analytics: React.FC = () => {
                 </div>
             </div>
 
-            {/* Category Filter - Moved above Heatmap */}
+            {/* Category Filter - Above Heatmap */}
             <div className="flex items-center gap-3 bg-bg-card p-4 rounded-xl border border-white/10">
                 <label className="text-sm font-semibold text-text-muted">Filtrar por categoría:</label>
                 <select

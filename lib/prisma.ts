@@ -1,4 +1,4 @@
-// Prisma Client Singleton
+// Prisma Client Singleton for Vercel Serverless Functions
 import { PrismaClient } from '@prisma/client';
 
 declare global {

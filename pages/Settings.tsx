@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Category } from '../types';
 import { Edit2, Trash2, Plus, Bell, BellOff, X, Lightbulb, Lock, Save, CheckCircle, Layers } from 'lucide-react';
 import { Modal } from '../components/Modal';
-import { db, CategoryDB } from '../db';
+import { api } from '../lib/api';
 
 interface SettingsProps {
     categories?: Category[];
     setCategories?: (cats: Category[]) => void;
+    onCategoriesChange?: () => void;
     currentPin?: string;
     onUpdatePin?: (pin: string) => void;
 }
@@ -14,6 +15,7 @@ interface SettingsProps {
 export const Settings: React.FC<SettingsProps> = ({
     categories = [],
     setCategories = () => { },
+    onCategoriesChange = () => { },
     currentPin = '0001',
     onUpdatePin = () => { }
 }) => {
@@ -23,22 +25,20 @@ export const Settings: React.FC<SettingsProps> = ({
     const [pinSuccess, setPinSuccess] = useState(false);
 
     const handleDelete = async (id: string) => {
-        // Cast id to number if possible, or handle string ids
-        await db.categories.delete(Number(id));
+        await api.categories.delete(id);
+        onCategoriesChange();
     };
 
     const handleSaveCategory = async () => {
         if (editingCategory) {
-            // Check if it's an update or new
-            // For now assuming update since we pass editingCategory
             const { id, ...data } = editingCategory;
             if (id && !id.startsWith('temp-')) {
-                await db.categories.update(Number(id), data);
+                await api.categories.update(id, data);
             } else {
-                // New category
-                await db.categories.add(data);
+                await api.categories.create(data as any);
             }
             setEditingCategory(null);
+            onCategoriesChange();
         }
     };
 
@@ -211,8 +211,6 @@ export const Settings: React.FC<SettingsProps> = ({
                             </div>
                         </div>
 
-
-
                         <div>
                             <label className="block text-sm font-medium text-text-muted mb-2">Color del Mapa de Calor</label>
                             <div className="flex items-center gap-4 p-4 bg-bg-dark border border-white/10 rounded-xl">
@@ -243,8 +241,6 @@ export const Settings: React.FC<SettingsProps> = ({
                     </div>
                 </Modal>
             )}
-
-
         </div>
     );
 };

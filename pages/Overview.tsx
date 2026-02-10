@@ -1,50 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { SummaryCards } from '../components/SummaryCards';
 import { Heatmap } from '../components/Heatmap';
 import { LogTable } from '../components/LogTable';
 import { CheckCircle, Calendar, Plus, Info } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { Category, HeatmapDay, ActivityLog } from '../types';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
+import { api, Log } from '../lib/api';
 import { Edit2, Trash2, X } from 'lucide-react';
 
 interface OverviewProps {
     categories?: Category[];
+    onCategoriesChange?: () => void;
 }
 
-export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
-    // Fetch logs from DB
-    const logs = useLiveQuery(() => db.logs.toArray()) || [];
-
+export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategoriesChange }) => {
+    const [logs, setLogs] = useState<Log[]>([]);
     const [filterCategory, setFilterCategory] = useState<string>('all');
     const [heatmapTimeRange, setHeatmapTimeRange] = useState<'1M' | '3M' | '6M' | '12M'>('12M');
     const [isHeatmapFullscreen, setIsHeatmapFullscreen] = useState(false);
-    const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-    // Generate heatmap data from real logs
-    const heatmapData: HeatmapDay[] = useLiveQuery(async () => {
-        let allLogs = await db.logs.toArray();
+    // Fetch logs from API
+    const fetchLogs = useCallback(async () => {
+        try {
+            const data = await api.logs.getAll();
+            setLogs(data);
+        } catch (err) {
+            console.error('Failed to fetch logs:', err);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchLogs();
+    }, [fetchLogs]);
+
+    // Helper to get local date key
+    const getLocalDateKey = (date: Date | string) => {
+        const d = typeof date === 'string' ? new Date(date) : date;
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    // Generate heatmap data from logs
+    const heatmapData: HeatmapDay[] = (() => {
+        let filteredLogs = logs;
         if (filterCategory !== 'all') {
-            allLogs = allLogs.filter(log => log.category === filterCategory);
+            filteredLogs = logs.filter(log => log.category === filterCategory);
         }
 
         const daysMap = new Map<string, number>();
-
-        // Group by date (YYYY-MM-DD local)
-        allLogs.forEach(log => {
+        filteredLogs.forEach(log => {
             if (log.dateObj) {
-                // Use local date logic
-                const year = log.dateObj.getFullYear();
-                const month = String(log.dateObj.getMonth() + 1).padStart(2, '0');
-                const day = String(log.dateObj.getDate()).padStart(2, '0');
-                const dateKey = `${year}-${month}-${day}`;
-
+                const dateKey = getLocalDateKey(log.dateObj);
                 daysMap.set(dateKey, (daysMap.get(dateKey) || 0) + 1);
             }
         });
 
-        // Calculate date range based on time filter
         const currentYear = new Date().getFullYear();
         const today = new Date();
         let start: Date;
@@ -73,31 +86,12 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
         const days: HeatmapDay[] = [];
         const loopDate = new Date(start);
         while (loopDate <= end) {
-            // Use UTC methods to generate the string to match the loop, 
-            // but we need to match the keys in daysMap which are local YYYY-MM-DD.
-            // Wait, the previous logic for daysMap used LOCAL date.
-            // To ensure 1-1 mapping, we should probably stick to one standard.
-            // The previous user edit used local date: log.dateObj.getFullYear()...
-
-            // So we should generate our loop using local date construction to match keys.
-            // But 'currentYear' is local.
-
             const yearStr = loopDate.getUTCFullYear();
             const monthStr = String(loopDate.getUTCMonth() + 1).padStart(2, '0');
             const dayStr = String(loopDate.getUTCDate()).padStart(2, '0');
             const dateStr = `${yearStr}-${monthStr}-${dayStr}`;
 
-            // Note: daysMap keys are generated from local time:
-            // const dateKey = `${year}-${month}-${day}`;
-            // If the user is in UTC+1, '2026-01-01' local might correspond to different UTC?
-            // Actually, if we just want "YYYY-MM-DD" matching, we should be consistent.
-
-            // Let's rely on the date string itself.
-            // If the user saves a log at 2026-01-01 10:00 local time, the key is 2026-01-01.
-            // Our loop generates 2026-01-01. They match string-wise.
-
             const count = daysMap.get(dateStr) || 0;
-
             let level: 0 | 1 | 2 | 3 | 4 = 0;
             if (count > 0) level = 1;
             if (count > 3) level = 2;
@@ -108,44 +102,13 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
             loopDate.setUTCDate(loopDate.getUTCDate() + 1);
         }
         return days;
-    }, [filterCategory, heatmapTimeRange]) || []; // Re-run when filterCategory or timeRange changes
-
-    // Calculate weekly stats
-    const weeklyStats = useLiveQuery(async () => {
-        const now = new Date();
-        const dayOfWeek = now.getDay(); // 0 (Sun) to 6 (Sat)
-        const diffToMonday = (dayOfWeek + 6) % 7; // Days since Monday
-
-        const monday = new Date(now);
-        monday.setDate(now.getDate() - diffToMonday);
-        monday.setHours(0, 0, 0, 0);
-
-        const logs = await db.logs.where('dateObj').aboveOrEqual(monday).toArray();
-
-        // Count unique days with activity this week
-        const activeDays = new Set<string>();
-        logs.forEach(log => {
-            const d = log.dateObj;
-            if (d) {
-                const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-                activeDays.add(key);
-            }
-        });
-
-        const count = activeDays.size;
-        const goal = 7; // Or configurable
-        const percentage = Math.round((count / goal) * 100);
-
-        return { count, goal, percentage };
-    }, []) || { count: 0, goal: 7, percentage: 0 };
-
+    })();
 
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
-    const [count, setCount] = useState(1); // Used for repetition count in modal
+    const [count, setCount] = useState(1);
     const [selectedCategory, setSelectedCategory] = useState('');
     const [note, setNote] = useState('');
 
-    // Fix: Initialize selectedDate with local YYYY-MM-DD
     const getTodayStr = () => {
         const d = new Date();
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -153,13 +116,12 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
 
     const [selectedDate, setSelectedDate] = useState(getTodayStr());
     const [viewingDate, setViewingDate] = useState<string | null>(null);
-    const [editingLogId, setEditingLogId] = useState<number | null>(null);
+    const [editingLogId, setEditingLogId] = useState<string | null>(null);
 
     // Logs for the selected viewing date
     const selectedDayLogs = logs.filter(log => {
         if (!viewingDate || !log.dateObj) return false;
-        const d = log.dateObj;
-        const logDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const logDateStr = getLocalDateKey(log.dateObj);
         return logDateStr === viewingDate;
     });
 
@@ -167,14 +129,15 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
         setViewingDate(date);
     };
 
-    const handleDeleteLog = (id: number) => {
-        setDeleteConfirmId(id);
+    const handleDeleteLog = (id: string | number) => {
+        setDeleteConfirmId(String(id));
     };
 
     const confirmDelete = async () => {
         if (deleteConfirmId !== null) {
-            await db.logs.delete(deleteConfirmId);
+            await api.logs.delete(deleteConfirmId);
             setDeleteConfirmId(null);
+            fetchLogs(); // Refresh
         }
     };
 
@@ -184,19 +147,16 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
 
     const handleEditLog = (log: ActivityLog) => {
         if (!log.id) return;
-        setViewingDate(null); // Close detail modal
-        setEditingLogId(log.id);
+        setViewingDate(null);
+        setEditingLogId(String(log.id));
 
-        // Pre-fill form
         if (log.dateObj) {
-            const d = log.dateObj;
-            setSelectedDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+            const d = typeof log.dateObj === 'string' ? new Date(log.dateObj) : log.dateObj;
+            setSelectedDate(getLocalDateKey(d));
         }
         setSelectedCategory(log.category);
-        setNote(log.eventName.replace(`Sesión de ${log.category}`, '').trim()); // Try to extract note if possible, otherwise it might just be the event name
-        // Count extraction is elusive without storing it explicitly, defaulting to 1 or deriving from intensity if logic was strict
+        setNote(log.eventName.replace(`Sesión de ${log.category}`, '').trim());
         setCount(1);
-
         setIsLogModalOpen(true);
     };
 
@@ -207,22 +167,21 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
 
         const [year, month, day] = selectedDate.split('-').map(Number);
         const now = new Date();
-        // Create date object preserving selected date but current time
         const newDateObj = new Date(year, month - 1, day, now.getHours(), now.getMinutes());
 
         const logData = {
             timestamp: newDateObj.toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-            dateObj: newDateObj,
+            dateObj: newDateObj.toISOString(),
             eventName: note || `Sesión de ${categoryToUse}`,
             category: categoryToUse,
-            intensity: 50 + (count * 10), // Dummy intensity logic
-            status: 'COMPLETED'
+            intensity: 50 + (count * 10),
+            status: 'COMPLETED' as const,
         };
 
         if (editingLogId) {
-            await db.logs.update(editingLogId, { ...logData, status: 'COMPLETED' as const });
+            await api.logs.update(editingLogId, logData);
         } else {
-            await db.logs.add({ ...logData, status: 'COMPLETED' } as any);
+            await api.logs.create(logData);
         }
 
         setIsLogModalOpen(false);
@@ -230,12 +189,12 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
         setCount(1);
         setEditingLogId(null);
         setSelectedDate(getTodayStr());
+        fetchLogs(); // Refresh
     };
 
     const currentYear = new Date().getFullYear();
     const dateRange = `1 Ene, ${currentYear} - 31 Dic, ${currentYear}`;
 
-    // Calculate breakdown based on logs and categories
     const totalLogs = logs.length;
     const categoryStats = categories.map(cat => {
         const catLogs = logs.filter(log => log.category === cat.name).length;
@@ -312,8 +271,6 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
 
             <div className="space-y-8">
                 <div className="space-y-8">
-
-
                     <Heatmap
                         data={heatmapData}
                         title="Registro de Actividad"
@@ -324,15 +281,12 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
                         onTimeRangeChange={setHeatmapTimeRange}
                         onFullscreenToggle={() => setIsHeatmapFullscreen(true)}
                     />
-                    {/* Cast logs to ActivityLog[] to match type if needed, though structure matches mostly */}
                     <LogTable
                         logs={logs as unknown as ActivityLog[]}
                         onEdit={handleEditLog}
                         onDelete={handleDeleteLog}
                     />
                 </div>
-
-
             </div>
 
             {/* Day Detail Modal */}
@@ -358,7 +312,7 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
                                         </div>
                                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
-                                                onClick={() => handleEditLog(log)}
+                                                onClick={() => handleEditLog(log as unknown as ActivityLog)}
                                                 className="p-2 hover:bg-white/10 rounded-lg text-text-muted hover:text-primary transition-colors"
                                                 title="Editar"
                                             >
@@ -382,7 +336,7 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
                             <button
                                 onClick={() => {
                                     setViewingDate(null);
-                                    if (viewingDate) setSelectedDate(viewingDate); // Set date to the viewed date
+                                    if (viewingDate) setSelectedDate(viewingDate);
                                     setIsLogModalOpen(true);
                                 }}
                                 className="mt-4 text-primary text-sm font-semibold hover:underline"
@@ -445,8 +399,6 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
                         </div>
                         <p className="text-[11px] text-text-muted mt-1 italic">¿Cuántas veces completaste esto hoy?</p>
                     </div>
-
-
 
                     <div className="pt-4 border-t border-white/10 flex items-center gap-3">
                         <button onClick={handleAddLog} className="flex-1 py-3.5 bg-primary text-bg-dark font-bold rounded-xl text-sm hover:opacity-90 transition-all">

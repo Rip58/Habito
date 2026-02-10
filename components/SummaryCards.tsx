@@ -1,22 +1,25 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Zap, Flame, CalendarCheck, TrendingUp } from 'lucide-react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
+import { api, Log } from '../lib/api';
 
 export const SummaryCards: React.FC = () => {
-  const stats = useLiveQuery(async () => {
-    const logs = await db.logs.toArray();
+  const [logs, setLogs] = useState<Log[]>([]);
 
-    // Total
+  useEffect(() => {
+    api.logs.getAll().then(setLogs).catch(console.error);
+  }, []);
+
+  // Helper to get local YYYY-MM-DD
+  const getLocalDateKey = (date: Date | string) => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const stats = (() => {
     const total = logs.length;
-
-    // Helper to get local YYYY-MM-DD
-    const getLocalDateKey = (date: Date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
 
     // Most Active Day & Unique Dates
     const dayCounts = new Map<string, number>();
@@ -33,7 +36,6 @@ export const SummaryCards: React.FC = () => {
     let maxDay = '-';
     let maxCount = 0;
 
-    // Find max day
     for (const [day, count] of dayCounts.entries()) {
       if (count > maxCount) {
         maxCount = count;
@@ -44,7 +46,6 @@ export const SummaryCards: React.FC = () => {
     }
 
     // Calculate Streak
-    const sortedDates = Array.from(uniqueDates).sort().reverse();
     const todayKey = getLocalDateKey(new Date());
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
@@ -57,7 +58,7 @@ export const SummaryCards: React.FC = () => {
     } else {
       let currentCheckDate = new Date();
       if (!uniqueDates.has(todayKey)) {
-        currentCheckDate = yesterday;
+        currentCheckDate = new Date(yesterday);
       }
 
       while (true) {
@@ -71,10 +72,13 @@ export const SummaryCards: React.FC = () => {
       }
     }
 
-    return { total, maxDay, maxCount, streak };
-  }, []) || { total: 0, maxDay: '-', maxCount: 0, streak: 0 };
+    // Days elapsed this year
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const daysElapsed = Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-  if (!stats) return null;
+    return { total, maxDay, maxCount, streak, daysElapsed };
+  })();
 
   return (
     <div className="bg-bg-card rounded-2xl border border-white/10 p-6 shadow-lg hover:border-primary/30 transition-all duration-300 group">
@@ -102,12 +106,10 @@ export const SummaryCards: React.FC = () => {
             <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">Total</p>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold text-text-primary tabular-nums">{stats.total}</span>
-              {stats.total > 0 && (
-                <span className="text-xs font-bold text-primary bg-primary/20 px-2 py-0.5 rounded-full">
-                  +100%
-                </span>
-              )}
             </div>
+            <p className="text-[10px] text-text-muted mt-0.5">
+              {stats.total} eventos / {stats.daysElapsed} días
+            </p>
           </div>
         </div>
 
