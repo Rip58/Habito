@@ -13,7 +13,7 @@ export const MobileHeader: React.FC = () => {
                     </div>
                 </div>
                 <div>
-                    <span className="block text-lg font-bold tracking-tight text-white leading-none">Activator</span>
+                    <span className="block text-lg font-bold tracking-tight text-white leading-none">HABITUS</span>
                     <span className="text-[10px] text-primary font-medium tracking-wider uppercase">Pro</span>
                 </div>
             </div>

@@ -248,7 +248,7 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
     const selectedCategoryColor = categories.find(c => c.name === filterCategory)?.color;
 
     return (
-        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-4 animate-in fade-in duration-500">
             {/* Enhanced Header with Gradient Background */}
             <div className="relative overflow-hidden bg-gradient-to-br from-bg-card via-bg-card to-primary/5 rounded-2xl border border-white/10 p-6 md:p-8 shadow-xl">
                 {/* Decorative Background Elements */}

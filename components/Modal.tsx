@@ -18,7 +18,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
 
       {/* Panel */}
       <aside className="relative w-full max-w-full md:w-[480px] bg-bg-card h-full shadow-2xl flex flex-col border-l border-white/10 animate-in slide-in-from-right duration-300 overflow-x-hidden">
-        <div className="p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] border-b border-white/10 flex items-center justify-between">
+        <div className="p-6 pt-[calc(2rem+env(safe-area-inset-top))] border-b border-white/10 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-white">{title}</h2>
           </div>
