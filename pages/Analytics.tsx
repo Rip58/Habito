@@ -1,40 +1,133 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, BarChart, Bar } from 'recharts';
 import { Heatmap } from '../components/Heatmap';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { HeatmapDay } from '../types';
-import { ArrowUpRight, TrendingUp, AlertTriangle, Clock } from 'lucide-react';
+import { ArrowUpRight, TrendingUp, AlertTriangle, Clock, Zap, Flame, CalendarCheck } from 'lucide-react';
 
-export const Analytics: React.FC = () => {
-    // Generate heatmap data from real logs
-    const data: HeatmapDay[] = useLiveQuery(async () => {
-        const allLogs = await db.logs.toArray();
-        const daysMap = new Map<string, number>();
-        allLogs.forEach(log => {
+export const Analytics: React.FC = () =& gt; {
+    const [filterCategory, setFilterCategory] = useState<string>('all');
+
+    // Fetch categories
+    const dbCategories = useLiveQuery(() =& gt; db.categories.toArray());
+    const categories = (dbCategories?.map(c =& gt; ({ ...c, id: String(c.id) }))) || [];
+
+    // Helper to get local YYYY-MM-DD
+    const getLocalDateKey = (date: Date) =& gt; {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    // Calculate statistics based on selected category
+    const stats = useLiveQuery(async() =& gt; {
+        let logs = await db.logs.toArray();
+
+        // Filter by category if not 'all'
+        if (filterCategory !== 'all') {
+            logs = logs.filter(log =& gt; log.category === filterCategory);
+        }
+
+        // Total events
+        const total = logs.length;
+
+        // Calculate days elapsed this year
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const daysElapsed = Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+        // Day counts and unique dates
+        const dayCounts = new Map<string, number>();
+        const uniqueDates = new Set<string>();
+
+        logs.forEach(log =& gt; {
             if (log.dateObj) {
-                const dateKey = log.dateObj.toISOString().split('T')[0];
+                const key = getLocalDateKey(log.dateObj);
+                dayCounts.set(key, (dayCounts.get(key) || 0) + 1);
+                uniqueDates.add(key);
+            }
+        });
+
+        // Find top day
+        let maxDay = '-';
+        let maxCount = 0;
+
+        for (const [day, count] of dayCounts.entries()) {
+            if (count & gt; maxCount) {
+                maxCount = count;
+                const [y, m, d] = day.split('-');
+                const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
+                maxDay = dateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+            }
+        }
+
+        // Calculate Streak
+        const todayKey = getLocalDateKey(new Date());
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayKey = getLocalDateKey(yesterday);
+
+        let streak = 0;
+
+        if (!uniqueDates.has(todayKey) && !uniqueDates.has(yesterdayKey)) {
+            streak = 0;
+        } else {
+            let currentCheckDate = new Date();
+            if (!uniqueDates.has(todayKey)) {
+                currentCheckDate = yesterday;
+            }
+
+            while (true) {
+                const dateKey = getLocalDateKey(currentCheckDate);
+                if (uniqueDates.has(dateKey)) {
+                    streak++;
+                    currentCheckDate.setDate(currentCheckDate.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+        }
+
+        return { total, maxDay, maxCount, streak, daysElapsed };
+    }, [filterCategory]) || { total: 0, maxDay: '-', maxCount: 0, streak: 0, daysElapsed: 1 };
+
+    // Generate heatmap data from real logs
+    const data: HeatmapDay[] = useLiveQuery(async() =& gt; {
+        let allLogs = await db.logs.toArray();
+
+        // Filter by category if not 'all'
+        if (filterCategory !== 'all') {
+            allLogs = allLogs.filter(log =& gt; log.category === filterCategory);
+        }
+
+        const daysMap = new Map<string, number>();
+        allLogs.forEach(log =& gt; {
+            if (log.dateObj) {
+                const dateKey = getLocalDateKey(log.dateObj);
                 daysMap.set(dateKey, (daysMap.get(dateKey) || 0) + 1);
             }
         });
+
         const days: HeatmapDay[] = [];
         const today = new Date();
-        for (let i = 364; i >= 0; i--) {
+        for (let i = 364; i & gt;= 0; i--) {
             const d = new Date();
             d.setDate(today.getDate() - i);
-            const dateStr = d.toISOString().split('T')[0];
+            const dateStr = getLocalDateKey(d);
             const count = daysMap.get(dateStr) || 0;
             let level: 0 | 1 | 2 | 3 | 4 = 0;
-            if (count > 0) level = 1;
-            if (count > 3) level = 2;
-            if (count > 7) level = 3;
-            if (count > 10) level = 4;
+            if (count & gt; 0) level = 1;
+            if (count & gt; 3) level = 2;
+            if (count & gt; 7) level = 3;
+            if (count & gt; 10) level = 4;
             days.push({ date: dateStr, count, level });
         }
         return days;
-    }, []) || [];
+    }, [filterCategory]) || [];
 
-    // Mock data for charts
+    // Mock data for charts (can be enhanced later with real data)
     const weeklyData = [
         { name: 'Lun', current: 40, prev: 24 },
         { name: 'Mar', current: 30, prev: 13 },
@@ -53,7 +146,7 @@ export const Analytics: React.FC = () => {
     ];
 
     return (
-        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-4 animate-in fade-in duration-500">
             <header className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mb-8">
                 <h1 className="text-2xl font-bold text-white">Análisis Detallado</h1>
                 <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
@@ -63,22 +156,66 @@ export const Analytics: React.FC = () => {
             </header>
 
             {/* Top Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                {[
-                    { label: 'Activaciones Totales', val: '124,892', trend: '12%', up: true },
-                    { label: 'Día Pico', val: 'Martes', sub: 'Prom 4.2k' },
-                    { label: 'Racha Activa', val: '18 Días', sub: '¡En racha!' },
-                    { label: 'Tasa de Éxito', val: '99.4%', sub: 'Estable' },
-                ].map((stat, i) => (
-                    <div key={i} className="bg-bg-card p-5 rounded-xl border border-white/5 shadow-sm">
-                        <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">{stat.label}</p>
-                        <div className="flex items-end gap-2">
-                            <h3 className="text-2xl font-bold text-white">{stat.val}</h3>
-                            {stat.trend && <span className="text-primary text-xs font-bold pb-1 flex items-center"><ArrowUpRight size={12} /> {stat.trend}</span>}
-                            {stat.sub && <span className="text-text-muted text-xs pb-1">{stat.sub}</span>}
-                        </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+                {/* Total Events */}
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-bg-card hover:bg-white/5 transition-all cursor-pointer group/stat border border-white/5 hover:border-primary/30">
+                    <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0 group-hover/stat:scale-110 transition-transform">
+                        <Zap className="text-primary" size={22} />
                     </div>
-                ))}
+                    <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">Total</p>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-2xl font-bold text-text-primary tabular-nums">{stats.total}</span>
+                        </div>
+                        <p className="text-[10px] text-text-muted mt-0.5">
+                            {stats.total} eventos / {stats.daysElapsed} días
+                        </p>
+                    </div>
+                </div>
+
+                {/* Current Streak */}
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-bg-card hover:bg-white/5 transition-all cursor-pointer group/stat border border-white/5 hover:border-orange-500/30">
+                    <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0 group-hover/stat:scale-110 transition-transform">
+                        <Flame className="text-orange-500" size={22} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">Racha</p>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-2xl font-bold text-text-primary tabular-nums">{stats.streak}</span>
+                            <span className="text-sm font-medium text-text-muted">días</span>
+                        </div>
+                        <p className="text-[10px] text-text-muted mt-0.5">Mantén el ritmo</p>
+                    </div>
+                </div>
+
+                {/* Top Day */}
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-bg-card hover:bg-white/5 transition-all cursor-pointer group/stat border border-white/5 hover:border-accent/30">
+                    <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center shrink-0 group-hover/stat:scale-110 transition-transform">
+                        <CalendarCheck className="text-accent" size={22} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">Día Top</p>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-2xl font-bold text-text-primary">{stats.maxDay}</span>
+                        </div>
+                        <p className="text-[10px] text-text-muted mt-0.5">{stats.maxCount} activaciones</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Category Filter - Moved above Heatmap */}
+            <div className="flex items-center gap-3 bg-bg-card p-4 rounded-xl border border-white/10">
+                <label className="text-sm font-semibold text-text-muted">Filtrar por categoría:</label>
+                <select
+                    value={filterCategory}
+                    onChange={(e) => setFilterCategory(e.target.value)}
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary transition-colors"
+                >
+                    <option value="all">Todas las Categorías</option>
+                    {categories.filter(c => c.enabled).map(cat => (
+                        <option key={cat.id} value={cat.name}>{cat.name}</option>
+                    ))}
+                </select>
             </div>
 
             <Heatmap data={data} title="Intensidad Anual" />
