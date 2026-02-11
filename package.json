@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "prebuild": "tsx scripts/generate-version.ts",
     "preview": "vite preview",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Category } from '../types';
-import { Edit2, Trash2, Plus, Bell, BellOff, X, Lightbulb, Lock, Save, CheckCircle, Layers } from 'lucide-react';
+import { Edit2, Trash2, Plus, Bell, BellOff, X, Lightbulb, Lock, Save, CheckCircle, Layers, Cloud, RefreshCw } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { api } from '../lib/api';
+import { useVersion } from '../components/VersionCheck';
 
 interface SettingsProps {
     categories?: Category[];
@@ -23,6 +24,7 @@ export const Settings: React.FC<SettingsProps> = ({
     const [newPin, setNewPin] = useState(currentPin);
     const [isEditingPin, setIsEditingPin] = useState(false);
     const [pinSuccess, setPinSuccess] = useState(false);
+    const { currentVersion, checkForUpdates, isChecking } = useVersion();
 
     const handleDelete = async (id: string) => {
         await api.categories.delete(id);
@@ -129,6 +131,60 @@ export const Settings: React.FC<SettingsProps> = ({
                         <span>PIN actualizado correctamente</span>
                     </div>
                 )}
+            </section>
+
+            <hr className="border-white/5 my-8" />
+
+            {/* Deploy Information Section */}
+            <section className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                    <Cloud className="text-primary" size={20} />
+                    <h2 className="text-lg font-bold text-white">Información de Deploy</h2>
+                </div>
+
+                <div className="bg-bg-card border border-white/5 rounded-xl p-6 space-y-4">
+                    {currentVersion ? (
+                        <>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <p className="text-xs text-text-muted mb-1">Fecha de Deploy</p>
+                                    <p className="text-white font-medium">
+                                        {new Date(currentVersion.buildDate).toLocaleDateString('es-ES', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-text-muted mb-1">Número de Deploy</p>
+                                    <p className="text-white font-medium">#{currentVersion.deployNumber}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-text-muted mb-1">Versión</p>
+                                    <p className="text-white font-mono text-sm">{currentVersion.buildHash}</p>
+                                </div>
+                            </div>
+
+                            <div className="pt-4 border-t border-white/5">
+                                <button
+                                    onClick={checkForUpdates}
+                                    disabled={isChecking}
+                                    className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <RefreshCw size={16} className={isChecking ? 'animate-spin' : ''} />
+                                    {isChecking ? 'Verificando...' : 'Verificar Actualizaciones'}
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="text-center py-4">
+                            <p className="text-text-muted">Cargando información de versión...</p>
+                        </div>
+                    )}
+                </div>
             </section>
 
             <hr className="border-white/5 my-8" />
