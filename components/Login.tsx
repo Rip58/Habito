@@ -57,7 +57,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
                         {[0, 1, 2, 3].map((i) => (
                             <input
                                 key={i}
-                                ref={el => inputRefs.current[i] = el}
+                                ref={el => { inputRefs.current[i] = el }}
                                 type="password"
                                 inputMode="numeric"
                                 pattern="[0-9]*"
