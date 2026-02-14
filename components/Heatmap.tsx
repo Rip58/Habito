@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { HeatmapDay } from '../types';
+import { HeatmapDay, Category } from '../types';
+import { ChevronDown, Filter } from 'lucide-react';
 
 interface HeatmapProps {
   data: HeatmapDay[];
@@ -9,7 +10,9 @@ interface HeatmapProps {
   onDayClick?: (date: string) => void;
   timeRange?: '1M' | '3M' | '6M' | '12M';
   onTimeRangeChange?: (range: '1M' | '3M' | '6M' | '12M') => void;
-  onFullscreenToggle?: () => void;
+  categories?: Category[];
+  selectedCategory?: string;
+  onCategoryChange?: (category: string) => void;
 }
 
 const hexToRgb = (hex: string) => {
@@ -23,7 +26,18 @@ const hexToRgb = (hex: string) => {
   } : null;
 };
 
-export const Heatmap: React.FC<HeatmapProps> = ({ data, title, subtitle, customColor, onDayClick, timeRange = '12M', onTimeRangeChange, onFullscreenToggle }) => {
+export const Heatmap: React.FC<HeatmapProps> = ({
+  data,
+  title,
+  subtitle,
+  customColor,
+  onDayClick,
+  timeRange = '12M',
+  onTimeRangeChange,
+  categories = [],
+  selectedCategory,
+  onCategoryChange
+}) => {
   // Process data to align by weeks starting Monday
   const { weeks, monthLabels } = useMemo(() => {
     if (!data.length) return { weeks: [], monthLabels: [] };
@@ -103,51 +117,57 @@ export const Heatmap: React.FC<HeatmapProps> = ({ data, title, subtitle, customC
   };
 
   return (
-    <div className="bg-bg-card border border-white/10 rounded-2xl p-6 shadow-lg hover:border-primary/20 transition-all duration-300 flex flex-col w-full">
+    <div className="flex flex-col w-full h-full">
       {/* Header with Title, Filters, and Actions */}
-      <div className="flex flex-col gap-4 mb-6">
+      <div className="flex flex-col gap-4 mb-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             {title && <h2 className="text-lg font-bold text-text-primary">{title}</h2>}
             {subtitle && <p className="text-text-muted text-sm">{subtitle}</p>}
           </div>
 
-          {/* Fullscreen Button */}
-          {onFullscreenToggle && (
-            <button
-              onClick={onFullscreenToggle}
-              className="md:hidden self-end p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/30 transition-all"
-              aria-label="Ver en pantalla completa"
-            >
-              <svg className="w-5 h-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            </button>
-          )}
-        </div>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Category Selector */}
+            {categories.length > 0 && onCategoryChange && (
+              <div className="relative z-20">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => onCategoryChange(e.target.value)}
+                  className="appearance-none bg-white/5 border border-white/5 text-xs text-text-muted font-medium rounded-lg pl-3 pr-8 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/50 cursor-pointer hover:bg-white/10 transition-colors"
+                >
+                  <option value="all">Todas</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+                  <Filter size={12} />
+                </div>
+              </div>
+            )}
 
-        {/* Time Range Filters and Legend */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          {/* Time Range Filter */}
-          {onTimeRangeChange && (
-            <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-white/5">
-              {(['1M', '3M', '6M', '12M'] as const).map((range) => (
-                <button
-                  key={range}
-                  onClick={() => onTimeRangeChange(range)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 ${timeRange === range
+            {/* Time Range Filter */}
+            {onTimeRangeChange && (
+              <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-white/5">
+                {(['1M', '3M', '6M', '12M'] as const).map((range) => (
+                  <button
+                    key={range}
+                    onClick={() => onTimeRangeChange(range)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 ${timeRange === range
                       ? 'bg-primary text-bg-dark shadow-sm'
                       : 'text-text-muted hover:text-text-primary hover:bg-white/5'
-                    }`}
-                >
-                  {range}
-                </button>
-              ))}
-            </div>
-          )}
+                      }`}
+                  >
+                    {range}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
-          {/* Intensity Legend */}
+        {/* Intensity Legend */}
+        <div className="flex justify-end w-full">
           <div className="flex items-center gap-3">
             <span className="text-xs text-text-muted font-medium">Menos</span>
             <div className="flex gap-1.5">

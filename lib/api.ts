@@ -34,8 +34,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const api = {
     logs: {
-        getAll: (category?: string) =>
-            request<Log[]>(`/logs${category && category !== 'all' ? `?category=${encodeURIComponent(category)}` : ''}`),
+        getAll: (categoryId?: string) =>
+            request<Log[]>(`/logs${categoryId && categoryId !== 'all' ? `?categoryId=${encodeURIComponent(categoryId)}` : ''}`),
 
         create: (data: Omit<Log, 'id'>) =>
             request<Log>('/logs', {

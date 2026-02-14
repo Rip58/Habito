@@ -26,7 +26,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onNavigate })
                             }`}
                     >
                         {/* Active Indicator Glow */}
-                        <div className={`absolute -top-3 w-8 h-1 rounded-b-full bg-primary transition-all duration-300 ${isActive ? 'opacity-100 shadow-[0_0_10px_#10b981]' : 'opacity-0'}`} />
+                        <div className={`absolute -top-3 w-8 h-1 rounded-b-full bg-primary transition-all duration-300 ${isActive ? 'opacity-100 shadow-[0_0_10px_#CA8A04]' : 'opacity-0'}`} />
 
                         <div className={`p-2 rounded-xl transition-all duration-300 ${isActive ? 'bg-primary/10 translate-y-[-4px]' : 'group-active:scale-95'}`}>
                             {item.icon}

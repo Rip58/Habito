@@ -1,26 +1,39 @@
 import React, { useState, useMemo } from 'react';
-import { ActivityLog } from '../types';
-import { ChevronRight, Circle, ChevronDown, Edit2, Trash2, ArrowUpDown } from 'lucide-react';
+import { ActivityLog, Category } from '../types';
+import { ChevronRight, Circle, ChevronDown, Edit2, Trash2, ArrowUpDown, Filter, ChevronUp } from 'lucide-react';
 
 interface LogTableProps {
   logs: ActivityLog[];
+  categories?: Category[];
   onEdit?: (log: ActivityLog) => void;
-  onDelete?: (id: number) => void;
+  onDelete?: (id: string) => void;
 }
 
-export const LogTable: React.FC<LogTableProps> = ({ logs, onEdit, onDelete }) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const LogTable: React.FC<LogTableProps> = ({ logs, categories = [], onEdit, onDelete }) => {
+  const [isOpen, setIsOpen] = useState(true);
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  // Sort logs based on selected order
-  const sortedLogs = useMemo(() => {
-    const sorted = [...logs].sort((a, b) => {
+  // Filter and Sort logs
+  const processedLogs = useMemo(() => {
+    let filtered = [...logs];
+
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(log => (log.categoryId === selectedCategory) || (log.category === selectedCategory));
+    }
+
+    // Sort
+    return filtered.sort((a, b) => {
       const dateA = a.dateObj?.getTime() || 0;
       const dateB = b.dateObj?.getTime() || 0;
       return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
     });
-    return sorted;
-  }, [logs, sortOrder]);
+  }, [logs, sortOrder, selectedCategory]);
+
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest');
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -41,139 +54,107 @@ export const LogTable: React.FC<LogTableProps> = ({ logs, onEdit, onDelete }) =>
   };
 
   return (
-    <div className="space-y-4">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between group"
-      >
-        <div className="flex items-center gap-2">
-          <h2 className="text-xl font-bold text-white group-hover:text-primary transition-colors">Registros Mensuales Recientes</h2>
-          <ChevronDown size={20} className={`text-text-muted transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+    <div className="flex flex-col h-full space-y-4">
+      <div className="flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
+          <h2 className="text-xl font-bold text-white transition-colors hover:text-primary/90">Actividad Reciente</h2>
+          {isOpen ? <ChevronDown size={20} className="text-text-muted" /> : <ChevronRight size={20} className="text-text-muted" />}
         </div>
-        <span className="text-primary text-sm font-semibold flex items-center gap-1 hover:underline">
-          {isOpen ? 'Ocultar' : 'Ver Todos'}
-        </span>
-      </button>
 
-      {isOpen && (
-        <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-4">
-          {/* Sort Filter */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ArrowUpDown size={16} className="text-text-muted" />
+        <div className="flex items-center gap-2">
+          {/* Category Filter */}
+          {categories.length > 0 && (
+            <div className="relative group">
               <select
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
-                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-medium focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none hover:border-primary/30 transition-all cursor-pointer"
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="appearance-none bg-white/5 border border-white/5 text-xs text-text-muted font-medium rounded-lg pl-3 pr-8 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/50 cursor-pointer hover:bg-white/10 transition-colors"
               >
-                <option value="newest" className="bg-bg-dark">Más reciente primero</option>
-                <option value="oldest" className="bg-bg-dark">Más antigua primero</option>
+                <option value="all">Todas</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
               </select>
-            </div>
-            <span className="text-xs text-text-muted">
-              {sortedLogs.length} {sortedLogs.length === 1 ? 'registro' : 'registros'}
-            </span>
-          </div>
-
-          {/* Mobile View */}
-          <div className="space-y-2 md:hidden">
-            {sortedLogs.map((log) => (
-              <div key={log.id} className="bg-bg-card px-3 py-2.5 rounded-lg border border-white/5 flex items-center justify-between gap-2">
-                {/* Left side: Event info */}
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className="px-2 py-0.5 rounded bg-white/10 text-[9px] text-slate-300 font-medium whitespace-nowrap">
-                    {log.category}
-                  </span>
-                  <div className="flex-1 min-w-0 flex items-baseline gap-1.5">
-                    <p className="text-xs font-semibold text-white truncate">{log.eventName}</p>
-                    <span className="text-[10px] text-text-muted whitespace-nowrap">{log.timestamp.split(',')[1]?.trim() || log.timestamp}</span>
-                  </div>
-                </div>
-
-                {/* Right side: Status and actions */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className={`w-1.5 h-1.5 rounded-full ${getStatusColor(log.status)}`} style={{ backgroundColor: 'currentColor' }}></span>
-
-                  {onEdit && (
-                    <button
-                      onClick={() => onEdit(log)}
-                      className="p-1.5 hover:bg-white/10 rounded text-text-muted hover:text-primary transition-colors"
-                      title="Editar"
-                    >
-                      <Edit2 size={12} />
-                    </button>
-                  )}
-                  {onDelete && log.id !== undefined && (
-                    <button
-                      onClick={() => onDelete(log.id!)}
-                      className="p-1.5 hover:bg-white/10 rounded text-text-muted hover:text-red-400 transition-colors"
-                      title="Eliminar"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  )}
-                </div>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+                <Filter size={12} />
               </div>
-            ))}
-          </div>
-
-          {/* Desktop View */}
-          <div className="hidden md:block bg-bg-card rounded-2xl border border-white/5 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-white/5 border-b border-white/5 text-xs font-bold uppercase tracking-wider text-text-muted">
-                    <th className="px-6 py-4">Hora</th>
-                    <th className="px-6 py-4">Evento</th>
-                    <th className="px-6 py-4">Categoría</th>
-                    <th className="px-6 py-4">Estado</th>
-                    <th className="px-6 py-4 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {sortedLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-white/5 transition-colors group">
-                      <td className="px-6 py-4 text-sm font-medium text-slate-200">{log.timestamp}</td>
-                      <td className="px-6 py-4 text-sm text-slate-300">{log.eventName}</td>
-                      <td className="px-6 py-4">
-                        <span className="px-2.5 py-1 rounded bg-white/10 text-xs text-slate-300 font-medium">
-                          {log.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`flex items-center gap-2 text-xs font-bold ${getStatusColor(log.status)}`}>
-                          <Circle size={8} fill="currentColor" className={log.status === 'PENDING' ? '' : 'animate-pulse-slow'} />
-                          {getStatusLabel(log.status)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {onEdit && (
-                            <button
-                              onClick={() => onEdit(log)}
-                              className="p-2 hover:bg-white/10 rounded-lg text-text-muted hover:text-primary transition-colors"
-                              title="Editar"
-                            >
-                              <Edit2 size={16} />
-                            </button>
-                          )}
-                          {onDelete && log.id !== undefined && (
-                            <button
-                              onClick={() => onDelete(log.id!)}
-                              className="p-2 hover:bg-white/10 rounded-lg text-text-muted hover:text-red-400 transition-colors"
-                              title="Eliminar"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
+          )}
+
+          {/* Sort Button */}
+          <div className="flex items-center bg-white/5 rounded-lg p-1 border border-white/5">
+            <button
+              onClick={toggleSortOrder}
+              className={`p-1.5 rounded-md transition-all ${sortOrder === 'newest' ? 'bg-primary text-white shadow-sm' : 'text-text-muted hover:text-white'}`}
+              title={sortOrder === 'newest' ? "Más recientes primero" : "Más antiguos primero"}
+            >
+              <ArrowUpDown size={14} />
+            </button>
           </div>
+          <span className="text-xs font-semibold text-text-muted px-2 py-1 bg-white/5 rounded-lg border border-white/5">
+            {processedLogs.length}
+          </span>
+        </div>
+      </div>
+
+      {/* Collapsible Content */}
+      {isOpen && (
+        <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar transition-all duration-300 ease-in-out">
+          {processedLogs.length > 0 ? (
+            processedLogs.map((log) => {
+              const categoryName = categories.find(c => c.id === log.categoryId)?.name || log.category;
+              return (
+                <div key={log.id} className="group bg-white/5 hover:bg-white/10 px-4 py-3 rounded-xl border border-white/5 hover:border-primary/20 transition-all duration-300 flex items-center justify-between gap-3 relative overflow-hidden">
+
+                  {/* Event Info */}
+                  <div className="flex items-center gap-3 flex-1 min-w-0 z-10">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-primary/10 text-primary border border-primary/10`}>
+                      <Circle size={8} fill="currentColor" className={log.status === 'PENDING' ? 'text-yellow-500' : 'text-primary'} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-white truncate">{log.eventName}</h3>
+                        <span className="px-1.5 py-0.5 rounded-md bg-white/10 text-[10px] text-text-muted font-medium whitespace-nowrap border border-white/5">
+                          {categoryName}
+                        </span>
+                      </div>
+                      <p className="text-xs text-text-muted truncate mt-0.5">{log.timestamp}</p>
+                    </div>
+                  </div>
+
+                  {/* Actions (Hover reveal) */}
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+                    {onEdit && (
+                      <button
+                        onClick={() => onEdit(log)}
+                        className="p-2 hover:bg-white/20 rounded-lg text-text-muted hover:text-primary transition-colors"
+                        title="Editar"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                    )}
+                    {onDelete && log.id !== undefined && (
+                      <button
+                        onClick={() => onDelete(log.id!)}
+                        className="p-2 hover:bg-red-500/20 rounded-lg text-text-muted hover:text-red-400 transition-colors"
+                        title="Eliminar"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Hover Glow */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none"></div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="h-40 flex flex-col items-center justify-center text-text-muted text-sm italic">
+              <p>No hay actividad registrada</p>
+              {selectedCategory !== 'all' && <p className="text-xs mt-1">en esta categoría</p>}
+            </div>
+          )}
         </div>
       )}
     </div>

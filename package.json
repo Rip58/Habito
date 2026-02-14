@@ -4,34 +4,31 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "prebuild": "tsx scripts/generate-version.ts",
-    "preview": "vite preview",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.3.0",
-    "@prisma/client": "^7.3.0",
+    "@prisma/adapter-pg": "^6.0.0",
+    "@prisma/client": "^6.0.0",
+    "@swc/helpers": "^0.5.18",
     "dexie": "^4.3.0",
     "dexie-react-hooks": "^4.2.0",
     "dotenv": "^17.2.4",
     "lucide-react": "^0.563.0",
+    "next": "^16.1.6",
     "pg": "^8.18.0",
-    "prisma": "^7.3.0",
+    "prisma": "^6.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "recharts": "^3.7.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/pg": "^8.16.0",
     "@vercel/node": "^5.6.1",
-    "@vitejs/plugin-react": "^5.0.0",
     "tsx": "^4.21.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "typescript": "~5.8.2"
   }
 }

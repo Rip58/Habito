@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Category {
@@ -25,7 +26,9 @@ model Log {
   timestamp   String   // Formatted display string
   dateObj     DateTime // For querying and filtering
   eventName   String
-  category    String   // Category name (string reference)
+  category    String   // Category name (string reference) - KEEP for now as fallback/display
+  categoryId  String?  // New Foreign Key
+  
   intensity   Int      @default(1)
   status      String   @default("COMPLETED")
   

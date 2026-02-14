@@ -1,11 +1,12 @@
 import React from 'react';
 
 export interface ActivityLog {
-  id?: number; // Dexie auto-increment ID
+  id?: string; // Prisma CUID
   timestamp: string;
   dateObj?: Date;
   eventName: string;
   category: string;
+  categoryId?: string; // Foreign Key ID
   intensity: number; // 0-100
   status: 'COMPLETED' | 'PENDING' | 'FAILED';
 }
