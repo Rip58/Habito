@@ -213,7 +213,6 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, categories }) 
       <div className="flex flex-col gap-2 mb-4 relative z-10">
         {/* Numerator */}
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] text-text-muted uppercase font-bold w-4 text-center">A</span>
           <div className="relative w-full">
             <select
               value={filterNum}
@@ -234,7 +233,6 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, categories }) 
 
         {/* Denominator */}
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] text-text-muted uppercase font-bold w-4 text-center">B</span>
           <div className="relative w-full">
             <select
               value={filterDenom}
@@ -255,7 +253,6 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, categories }) 
       <div>
         <div className="flex items-baseline gap-2">
           <span className="text-3xl font-bold text-white tabular-nums tracking-tight">{percent}%</span>
-          <span className="text-xs text-text-muted font-medium">(A/B)</span>
         </div>
         <p className="text-[10px] text-text-muted mt-1 opacity-60 font-medium">{countNum} / {countDenom} eventos</p>
       </div>
