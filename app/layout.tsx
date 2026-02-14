@@ -1,11 +1,18 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
     title: 'Activator',
     description: 'Activator Dashboard',
+};
+
+export const viewport: Viewport = {
     themeColor: '#020617',
-    viewport: 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover',
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: 'cover',
 };
 
 export default function RootLayout({
