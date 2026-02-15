@@ -26,8 +26,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         ...options,
     });
     if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: res.statusText }));
-        throw new Error(err.error || 'API request failed');
+        let errorMsg = 'API request failed';
+        try {
+            const errorData = await res.json();
+            errorMsg = `Server Error (${res.status}): ${errorData.error || res.statusText}`;
+        } catch {
+            errorMsg = `Network Error (${res.status}): ${res.statusText}`;
+        }
+        throw new Error(errorMsg);
     }
     return res.json();
 }
