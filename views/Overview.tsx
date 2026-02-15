@@ -33,7 +33,7 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
         } catch (err: any) {
             console.error('Failed to fetch logs:', err);
             // Temporary debug alert
-            // alert('Debug: Failed to fetch logs. ' + (err.message || JSON.stringify(err)));
+            alert('Debug: Failed to fetch logs (GET). ' + (err.message || JSON.stringify(err)));
         }
     }, []);
 
