@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Lock, ArrowRight, Zap } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Zap, AlertCircle, ArrowRight } from 'lucide-react';
 
 interface LoginProps {
     onLogin: (pin: string) => void;
@@ -24,9 +24,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
 
         // Auto-submit if complete
         if (index === 3 && value !== '') {
-            onLogin(newPin.join('') + value); // This might be buggy depending on state update, better use derived
-            // Actually better to just wait for button or useEffect, but for 4 digits simple is fine
-            setTimeout(() => onLogin(newPin.map((d, i) => i === index ? value : d).join('')), 100);
+            onLogin(newPin.join(''));
         }
     };
 
@@ -52,35 +50,40 @@ export const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
                     <p className="text-text-muted">Introduce tu PIN de acceso para continuar.</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="flex justify-center gap-4">
-                        {[0, 1, 2, 3].map((i) => (
-                            <input
-                                key={i}
-                                ref={el => { inputRefs.current[i] = el }}
-                                type="password"
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                maxLength={1}
-                                value={pin[i]}
-                                onChange={(e) => handleChange(i, e.target.value)}
-                                onKeyDown={(e) => handleKeyDown(i, e)}
-                                className={`w-14 h-16 bg-bg-card border-2 rounded-xl text-center text-2xl font-bold text-white focus:outline-none transition-all ${error
-                                    ? 'border-red-500/50 focus:border-red-500'
-                                    : 'border-white/10 focus:border-primary focus:shadow-[0_0_20px_rgba(48,232,122,0.15)]'
-                                    }`}
-                            />
+                <form onSubmit={handleSubmit} className="space-y-8">
+                    <div className="flex justify-center gap-4 mb-8">
+                        {pin.map((digit, index) => (
+                            <div key={index} className="relative">
+                                <input
+                                    ref={el => { inputRefs.current[index] = el }}
+                                    type="password"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    maxLength={1}
+                                    value={digit}
+                                    onChange={(e) => handleChange(index, e.target.value)}
+                                    onKeyDown={(e) => handleKeyDown(index, e)}
+                                    className="w-14 h-16 bg-bg-card border-2 border-border-subtle rounded-xl text-center text-2xl font-bold text-white focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all outline-none"
+                                />
+                                {digit && (
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <div className="w-4 h-4 bg-white rounded-full"></div>
+                                    </div>
+                                )}
+                            </div>
                         ))}
                     </div>
 
                     {error && (
-                        <p className="text-red-400 text-center text-sm font-medium animate-pulse">
-                            PIN incorrecto. Inténtalo de nuevo.
-                        </p>
+                        <div className="bg-red-500/10 text-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
+                            <AlertCircle size={20} />
+                            <p className="font-medium">PIN incorrecto. Inténtalo de nuevo.</p>
+                        </div>
                     )}
 
                     <button
-                        type="submit"
+                        type="button"
+                        onClick={() => onLogin(pin.join(''))}
                         className="w-full bg-primary hover:bg-primary-hover text-bg-dark font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 group"
                     >
                         <span>Acceder al Sistema</span>
