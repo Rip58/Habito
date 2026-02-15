@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npx prisma generate && next build",
     "prebuild": "npm run clean:garbage",
     "start": "next start",
     "clean:garbage": "chmod +x ./scripts/clean-garbage.sh && ./scripts/clean-garbage.sh",
