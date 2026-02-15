@@ -30,8 +30,10 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                 dateObj: new Date(log.dateObj)
             }));
             setLogs(formattedLogs);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to fetch logs:', err);
+            // Temporary debug alert
+            // alert('Debug: Failed to fetch logs. ' + (err.message || JSON.stringify(err)));
         }
     }, []);
 
@@ -168,39 +170,44 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
     };
 
     const handleAddLog = async () => {
-        // Default to first category ID if none selected
-        if (!selectedCategory && categories.length > 0) setSelectedCategory(categories[0].id);
+        try {
+            // Default to first category ID if none selected
+            if (!selectedCategory && categories.length > 0) setSelectedCategory(categories[0].id);
 
-        const categoryIdToUse = selectedCategory || (categories.length > 0 ? categories[0].id : '');
-        const categoryObj = categories.find(c => c.id === categoryIdToUse);
-        const categoryName = categoryObj ? categoryObj.name : 'General';
+            const categoryIdToUse = selectedCategory || (categories.length > 0 ? categories[0].id : '');
+            const categoryObj = categories.find(c => c.id === categoryIdToUse);
+            const categoryName = categoryObj ? categoryObj.name : 'General';
 
-        const [year, month, day] = selectedDate.split('-').map(Number);
-        const now = new Date();
-        const newDateObj = new Date(year, month - 1, day, now.getHours(), now.getMinutes());
+            const [year, month, day] = selectedDate.split('-').map(Number);
+            const now = new Date();
+            const newDateObj = new Date(year, month - 1, day, now.getHours(), now.getMinutes());
 
-        const logData = {
-            timestamp: newDateObj.toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-            dateObj: newDateObj.toISOString(),
-            eventName: note || `Sesión de ${categoryName}`,
-            category: categoryName,
-            categoryId: categoryIdToUse,
-            intensity: 50 + (count * 10),
-            status: 'COMPLETED' as const,
-        };
+            const logData = {
+                timestamp: newDateObj.toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+                dateObj: newDateObj.toISOString(),
+                eventName: note || `Sesión de ${categoryName}`,
+                category: categoryName,
+                categoryId: categoryIdToUse,
+                intensity: 50 + (count * 10),
+                status: 'COMPLETED' as const,
+            };
 
-        if (editingLogId) {
-            await api.logs.update(editingLogId, logData);
-        } else {
-            await api.logs.create(logData);
+            if (editingLogId) {
+                await api.logs.update(editingLogId, logData);
+            } else {
+                await api.logs.create(logData);
+            }
+
+            setIsLogModalOpen(false);
+            setNote('');
+            setCount(1);
+            setEditingLogId(null);
+            setSelectedDate(getTodayStr());
+            fetchLogs(); // Refresh
+        } catch (error: any) {
+            console.error('Save failed:', error);
+            alert('Error al guardar: ' + (error.message || 'Error desconocido'));
         }
-
-        setIsLogModalOpen(false);
-        setNote('');
-        setCount(1);
-        setEditingLogId(null);
-        setSelectedDate(getTodayStr());
-        fetchLogs(); // Refresh
     };
 
     const currentYear = new Date().getFullYear();
