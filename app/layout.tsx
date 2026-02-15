@@ -4,6 +4,10 @@ import './globals.css';
 export const metadata: Metadata = {
     title: 'Activator',
     description: 'Activator Dashboard',
+    icons: {
+        icon: '/icon.png',
+        apple: '/icon.png',
+    },
 };
 
 export const viewport: Viewport = {
