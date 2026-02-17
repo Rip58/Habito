@@ -92,7 +92,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
                 </form>
 
                 <p className="text-center text-xs text-text-muted/50 uppercase tracking-widest">
-                    Sistema Seguro • Activator v1.0
+                    Sistema Seguro • Habitos Pro v1.0
                 </p>
             </div>
         </div>

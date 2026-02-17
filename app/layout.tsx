@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-    title: 'Activator',
-    description: 'Activator Dashboard',
+    title: 'Habitos Pro',
+    description: 'Habitos Pro Dashboard',
     icons: {
         icon: '/icon.png',
         apple: '/icon.png',

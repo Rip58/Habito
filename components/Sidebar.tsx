@@ -19,7 +19,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
         <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-hover rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-300">
           <Zap className="text-white fill-white" size={20} />
         </div>
-        <span className="text-2xl font-bold tracking-tight text-white group-hover:text-primary transition-colors">Activator</span>
+        <span className="text-2xl font-bold tracking-tight text-white group-hover:text-primary transition-colors">Habitos Pro</span>
       </div>
 
       <nav className="flex items-center gap-2 bg-black/20 p-1.5 rounded-xl border border-white/5">
