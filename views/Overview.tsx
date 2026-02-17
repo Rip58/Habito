@@ -234,7 +234,7 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                 {/* Header Section - Spans Full Width */}
                 <div className="col-span-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
                     <div className="space-y-1">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
                             <h1 className="text-4xl font-bold tracking-tight text-white">
                                 Resumen
                             </h1>

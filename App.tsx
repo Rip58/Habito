@@ -94,7 +94,7 @@ const App: React.FC = () => {
         <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative w-full max-w-full pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8">
           <MobileHeader />
-          <div className="fixed top-0 left-0 w-full h-96 bg-primary/5 rounded-full blur-[128px] pointer-events-none -z-10 translate-x-1/4 -translate-y-1/2"></div>
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[128px] pointer-events-none -z-10 translate-x-1/2 -translate-y-1/2"></div>
           {renderPage()}
         </main>
         <BottomNav currentPage={currentPage} onNavigate={setCurrentPage} />

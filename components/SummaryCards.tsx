@@ -140,7 +140,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, categories }) 
     setFilter: (val: string) => void,
     options: Category[]
   }) => (
-    <div className="glass-card rounded-2xl p-6 relative group transition-all duration-300 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5">
+    <div className="glass-card rounded-2xl p-4 relative group transition-all duration-300 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5">
       <div className="flex items-start justify-between mb-4">
         <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-primary/10 text-primary group-hover:scale-105 transition-transform duration-300 border border-primary/10`}>
           <Icon size={24} />
@@ -199,7 +199,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, categories }) 
     setFilterDenom: (val: string) => void,
     options: Category[]
   }) => (
-    <div className="glass-card rounded-2xl p-6 relative group transition-all duration-300 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5">
+    <div className="glass-card rounded-2xl p-4 relative group transition-all duration-300 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5">
 
       {/* Header with Title and Icon */}
       <div className="flex items-center justify-between mb-4">
