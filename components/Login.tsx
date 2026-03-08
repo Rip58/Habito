@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Zap, AlertCircle, ArrowRight } from 'lucide-react';
+import React from 'react';
+import { Activity, AlertCircle, ArrowRight } from 'lucide-react';
 
 interface LoginProps {
     onLogin: (pin: string) => void;
@@ -7,7 +7,7 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
-    const [pin, setPin] = useState(['', '', '', '']);
+    const [pin, setPin] = React.useState(['', '', '', '']);
     const inputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
     const handleChange = (index: number, value: string) => {
@@ -17,12 +17,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
         newPin[index] = value;
         setPin(newPin);
 
-        // Auto-focus next input
         if (value !== '' && index < 3) {
             inputRefs.current[index + 1]?.focus();
         }
 
-        // Auto-submit if complete
         if (index === 3 && value !== '') {
             onLogin(newPin.join(''));
         }
@@ -40,22 +38,29 @@ export const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
     };
 
     return (
-        <div className="min-h-screen bg-bg-dark flex flex-col items-center justify-center p-4">
-            <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
-                <div className="flex flex-col items-center justify-center text-center">
-                    <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 ring-4 ring-primary/5">
-                        <Zap className="text-primary w-8 h-8" />
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+            <div className="w-full max-w-sm space-y-8 fade-in">
+
+                {/* Logo + Title */}
+                <div className="flex flex-col items-center text-center gap-4">
+                    <div className="w-16 h-16 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center">
+                        <Activity className="text-primary w-8 h-8" />
                     </div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Bienvenido</h1>
-                    <p className="text-text-muted">Introduce tu PIN de acceso para continuar.</p>
+                    <div>
+                        <h1 className="text-2xl font-semibold text-foreground">Bienvenido</h1>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Introduce tu PIN para acceder
+                        </p>
+                    </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-8">
-                    <div className="flex justify-center gap-4 mb-8">
+                {/* PIN form */}
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="flex justify-center gap-3">
                         {pin.map((digit, index) => (
                             <div key={index} className="relative">
                                 <input
-                                    ref={el => { inputRefs.current[index] = el }}
+                                    ref={el => { inputRefs.current[index] = el; }}
                                     type="password"
                                     inputMode="numeric"
                                     pattern="[0-9]*"
@@ -63,36 +68,39 @@ export const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
                                     value={digit}
                                     onChange={(e) => handleChange(index, e.target.value)}
                                     onKeyDown={(e) => handleKeyDown(index, e)}
-                                    className="w-14 h-16 bg-bg-card border-2 border-border-subtle rounded-xl text-center text-2xl font-bold text-white focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all outline-none"
+                                    className="w-14 h-14 bg-card border-2 border-border rounded-xl text-center text-xl font-semibold text-foreground focus:border-primary focus:ring-4 focus:ring-ring/20 transition-all outline-none"
                                 />
                                 {digit && (
                                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                        <div className="w-4 h-4 bg-white rounded-full"></div>
+                                        <div className="w-3 h-3 bg-foreground rounded-full" />
                                     </div>
                                 )}
                             </div>
                         ))}
                     </div>
 
+                    {/* Error */}
                     {error && (
-                        <div className="bg-red-500/10 text-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
-                            <AlertCircle size={20} />
-                            <p className="font-medium">PIN incorrecto. Inténtalo de nuevo.</p>
+                        <div className="bg-destructive/10 text-destructive border border-destructive/20 p-3 rounded-lg flex items-center gap-3 text-sm fade-in">
+                            <AlertCircle size={16} />
+                            <span className="font-medium">PIN incorrecto. Inténtalo de nuevo.</span>
                         </div>
                     )}
 
+                    {/* Submit */}
                     <button
                         type="button"
                         onClick={() => onLogin(pin.join(''))}
-                        className="w-full bg-primary hover:bg-primary-hover text-bg-dark font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 group"
+                        className="w-full h-11 bg-primary text-primary-foreground font-semibold rounded-md transition-all flex items-center justify-center gap-2 group hover:opacity-90 active:scale-[0.99]"
                     >
-                        <span>Acceder al Sistema</span>
-                        <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                        <span>Acceder</span>
+                        <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
                     </button>
                 </form>
 
-                <p className="text-center text-xs text-text-muted/50 uppercase tracking-widest">
-                    Sistema Seguro • Habitos Pro v1.0
+                {/* Footer */}
+                <p className="text-center text-xs text-muted-foreground uppercase tracking-wider">
+                    Habitos Pro · Acceso seguro
                 </p>
             </div>
         </div>

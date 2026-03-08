@@ -11,13 +11,15 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-    themeColor: '#020617',
+    themeColor: '#0f0f0f',
     width: 'device-width',
     initialScale: 1,
     maximumScale: 1,
     userScalable: false,
     viewportFit: 'cover',
 };
+
+import { ThemeProvider } from '../components/ThemeProvider';
 
 export default function RootLayout({
     children,
@@ -29,61 +31,101 @@ export default function RootLayout({
         theme: {
             extend: {
                 colors: {
-                    primary: '#CA8A04', // Elegant Gold
-                    'primary-hover': '#A16207', // Darker Gold
-                    'bg-dark': '#1C1917', // Warm Black (Stone 950)
-                    'bg-card': '#292524', // Warm Dark Grey (Stone 800)
-                    'bg-sidebar': '#292524', // Match card
-                    'text-muted': '#A8A29E', // Stone 400
-                    'text-primary': '#FAFAF9', // Stone 50
-                    'accent': '#CA8A04', // Gold
-                    'border-subtle': '#44403C', // Stone 700
+                    border: 'hsl(var(--border) / <alpha-value>)',
+                    input: 'hsl(var(--input) / <alpha-value>)',
+                    ring: 'hsl(var(--ring) / <alpha-value>)',
+                    background: 'hsl(var(--background) / <alpha-value>)',
+                    foreground: 'hsl(var(--foreground) / <alpha-value>)',
+                    primary: {
+                        DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
+                        foreground: 'hsl(var(--primary-foreground) / <alpha-value>)',
+                    },
+                    secondary: {
+                        DEFAULT: 'hsl(var(--secondary) / <alpha-value>)',
+                        foreground: 'hsl(var(--secondary-foreground) / <alpha-value>)',
+                    },
+                    destructive: {
+                        DEFAULT: 'hsl(var(--destructive) / <alpha-value>)',
+                        foreground: 'hsl(var(--destructive-foreground) / <alpha-value>)',
+                    },
+                    muted: {
+                        DEFAULT: 'hsl(var(--muted) / <alpha-value>)',
+                        foreground: 'hsl(var(--muted-foreground) / <alpha-value>)',
+                    },
+                    accent: {
+                        DEFAULT: 'hsl(var(--accent) / <alpha-value>)',
+                        foreground: 'hsl(var(--accent-foreground) / <alpha-value>)',
+                    },
+                    popover: {
+                        DEFAULT: 'hsl(var(--popover) / <alpha-value>)',
+                        foreground: 'hsl(var(--popover-foreground) / <alpha-value>)',
+                    },
+                    card: {
+                        DEFAULT: 'hsl(var(--card) / <alpha-value>)',
+                        foreground: 'hsl(var(--card-foreground) / <alpha-value>)',
+                    },
                 },
                 fontFamily: {
-                    sans: ['DM Sans', 'sans-serif'],
-                    mono: ['Fira Code', 'monospace'],
+                    sans: ['Inter', 'system-ui', 'sans-serif'],
+                    mono: ['JetBrains Mono', 'monospace'],
+                },
+                borderRadius: {
+                    lg: '0.5rem',
+                    md: '0.375rem',
+                    sm: '0.25rem',
+                    xl: '0.75rem',
+                    '2xl': '1rem',
+                    '3xl': '1.5rem',
                 },
                 animation: {
                     'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    'float': 'float 6s ease-in-out infinite',
-                    'glow': 'glow 2s ease-in-out infinite alternate',
-                    'fade-in': 'fadeIn 0.5s ease-out forwards',
-                    'shine': 'shine 0.6s ease-in-out',
+                    'fade-in': 'fade-in-up 0.4s ease-out both',
+                    'slide-in': 'slide-in-right 0.3s ease-out both',
+                    'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
+                    'modal-in': 'zoom-in-95 0.2s ease-out both',
                 },
                 keyframes: {
-                    float: {
-                        '0%, 100%': { transform: 'translateY(0)' },
-                        '50%': { transform: 'translateY(-10px)' },
+                    'fade-in-up': {
+                        from: { opacity: '0', transform: 'translateY(10px)' },
+                        to: { opacity: '1', transform: 'translateY(0)' },
                     },
-                    glow: {
-                        'from': { boxShadow: '0 0 8px -4px #CA8A04' }, // Gold glow
-                        'to': { boxShadow: '0 0 16px 2px #CA8A0440' },
+                    'slide-in-right': {
+                        from: { opacity: '0', transform: 'translateX(-10px)' },
+                        to: { opacity: '1', transform: 'translateX(0)' },
                     },
-                    shine: {
-                        '0%': { transform: 'translateX(-100%)' },
-                        '100%': { transform: 'translateX(100%)' },
+                    'pulse-glow': {
+                        '0%, 100%': { opacity: '1' },
+                        '50%': { opacity: '0.7' },
                     },
-                    fadeIn: {
-                        'from': { opacity: '0', transform: 'translateY(20px)', filter: 'blur(10px)' },
-                        'to': { opacity: '1', transform: 'translateY(0)', filter: 'blur(0)' },
-                    }
-                }
+                    'zoom-in-95': {
+                        from: { opacity: '0', transform: 'scale(0.95)' },
+                        to: { opacity: '1', transform: 'scale(1)' },
+                    },
+                },
+                boxShadow: {
+                    sm: '0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10)',
+                    md: '0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10)',
+                },
             },
         },
     };
 
     return (
-        <html lang="en" className="dark" suppressHydrationWarning>
+        <html lang="es" suppressHydrationWarning>
             <head>
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
                 <script src="https://cdn.tailwindcss.com"></script>
                 <link
-                    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fira+Code:wght@400;500;600;700&display=swap"
+                    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap"
                     rel="stylesheet" />
                 <script dangerouslySetInnerHTML={{ __html: `tailwind.config = ${JSON.stringify(tailwindConfig)}` }} />
             </head>
-            <body>{children}</body>
+            <body>
+                <ThemeProvider>
+                    {children}
+                </ThemeProvider>
+            </body>
         </html>
     );
 }

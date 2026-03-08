@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Category } from '../types';
-import { Edit2, Trash2, Plus, Bell, BellOff, X, Lightbulb, Lock, Save, CheckCircle, Layers, Cloud, RefreshCw } from 'lucide-react';
+import { Edit2, Trash2, Plus, X, Lock, Save, CheckCircle, Layers, Cloud, RefreshCw, ChevronRight, Moon, Sun, Monitor } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { api } from '../lib/api';
 import { useVersion } from '../components/VersionCheck';
+import { useTheme } from '../components/ThemeProvider';
 
 interface SettingsProps {
     categories?: Category[];
@@ -25,6 +26,7 @@ export const Settings: React.FC<SettingsProps> = ({
     const [isEditingPin, setIsEditingPin] = useState(false);
     const [pinSuccess, setPinSuccess] = useState(false);
     const { currentVersion, checkForUpdates, isChecking } = useVersion();
+    const { theme, setTheme } = useTheme();
 
     const handleDelete = async (id: string) => {
         await api.categories.delete(id);
@@ -50,7 +52,7 @@ export const Settings: React.FC<SettingsProps> = ({
             name: 'Nueva Categoría',
             target: '1 hora',
             enabled: true,
-            color: '#30e87a'
+            color: '#3b82f6'
         });
     };
 
@@ -63,61 +65,105 @@ export const Settings: React.FC<SettingsProps> = ({
         }
     };
 
+    const COLOR_PRESETS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#22c55e', '#ef4444', '#eab308', '#06b6d4'];
+
     return (
-        <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
-            <header className="flex flex-col gap-4 md:flex-row md:justify-between md:items-end mb-8">
-                <div>
-                    <h1 className="text-2xl font-bold text-white mb-2">Configuración</h1>
-                    <p className="text-text-muted">Gestiona tus preferencias del sistema.</p>
-                </div>
-            </header>
+        <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6 fade-in">
 
-            {/* Security Section */}
-            <section className="space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                    <Lock className="text-primary" size={20} />
-                    <h2 className="text-lg font-bold text-white">Seguridad</h2>
+            {/* Page Header */}
+            <div>
+                <h1 className="text-2xl font-semibold text-foreground tracking-tight">Configuración</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">Gestiona tus preferencias del sistema.</p>
+            </div>
+
+            {/* ── Apariencia ───────────────────────────────────── */}
+            <section className="space-y-3">
+                <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                        <Monitor size={14} />
+                    </div>
+                    <h2 className="text-base font-semibold text-foreground">Apariencia</h2>
                 </div>
 
-                <div className="bg-bg-card border border-white/5 rounded-xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="rounded-lg border bg-card/40 border-border/40 p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h3 className="font-semibold text-white">PIN de Acceso</h3>
-                        <p className="text-sm text-text-muted mt-1">Código de 4 dígitos para acceder a la aplicación.</p>
+                        <p className="text-sm font-semibold text-foreground">Tema Visual</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Define cómo se ve la interfaz de usuario.</p>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-md border border-border/40 w-fit">
+                        <button
+                            onClick={() => setTheme('light')}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm font-medium transition-all duration-200 ${theme === 'light'
+                                ? 'bg-card shadow-sm text-foreground'
+                                : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                        >
+                            <Sun size={14} />
+                            Claro
+                        </button>
+                        <button
+                            onClick={() => setTheme('dark')}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm font-medium transition-all duration-200 ${theme === 'dark'
+                                ? 'bg-card shadow-sm text-foreground'
+                                : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                        >
+                            <Moon size={14} />
+                            Oscuro
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            {/* ── Seguridad ─────────────────────────────────────── */}
+            <section className="space-y-3">
+                <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                        <Lock size={14} />
+                    </div>
+                    <h2 className="text-base font-semibold text-foreground">Seguridad</h2>
+                </div>
+
+                <div className="rounded-lg border bg-card/40 border-border/40 px-4 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+                    <div>
+                        <p className="text-sm font-semibold text-foreground">PIN de Acceso</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Código de 4 dígitos para acceder a la aplicación.</p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
                         {isEditingPin ? (
-                            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4">
+                            <div className="flex items-center gap-2 slide-in">
                                 <input
                                     type="text"
                                     maxLength={4}
                                     value={newPin}
                                     onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, ''))}
-                                    className="bg-bg-dark border border-white/10 rounded-lg px-4 py-2 text-center font-mono text-white w-32 focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                                    className="h-10 w-28 bg-background border border-input rounded-md px-3 text-center font-mono text-foreground focus:ring-2 focus:ring-ring/30 focus:border-ring outline-none"
                                     placeholder="0000"
                                     autoFocus
                                 />
                                 <button
                                     onClick={handleSavePin}
-                                    className="p-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors"
+                                    className="h-9 w-9 bg-primary/10 text-primary hover:bg-primary/20 rounded-md flex items-center justify-center transition-colors"
                                     title="Guardar"
                                 >
-                                    <Save size={20} />
+                                    <Save size={16} />
                                 </button>
                                 <button
                                     onClick={() => { setIsEditingPin(false); setNewPin(currentPin); }}
-                                    className="p-2 hover:bg-white/10 text-text-muted rounded-lg transition-colors"
+                                    className="h-9 w-9 hover:bg-accent text-muted-foreground rounded-md flex items-center justify-center transition-colors"
                                     title="Cancelar"
                                 >
-                                    <X size={20} />
+                                    <X size={16} />
                                 </button>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-4">
-                                <span className="font-mono text-xl text-slate-400 tracking-widest">••••</span>
+                            <div className="flex items-center gap-3">
+                                <span className="font-mono text-xl text-muted-foreground tracking-widest">••••</span>
                                 <button
                                     onClick={() => { setIsEditingPin(true); setNewPin(currentPin); }}
-                                    className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg text-sm font-medium transition-colors"
+                                    className="h-9 px-4 bg-muted/60 hover:bg-muted border border-border/40 text-foreground rounded-md text-sm font-medium transition-colors"
                                 >
                                     Cambiar PIN
                                 </button>
@@ -125,174 +171,247 @@ export const Settings: React.FC<SettingsProps> = ({
                         )}
                     </div>
                 </div>
+
                 {pinSuccess && (
-                    <div className="flex items-center gap-2 text-primary text-sm bg-primary/5 p-3 rounded-lg animate-in fade-in slide-in-from-top-2">
-                        <CheckCircle size={16} />
+                    <div className="flex items-center gap-2 text-sm bg-primary/10 border border-primary/20 text-primary p-3 rounded-lg fade-in">
+                        <CheckCircle size={15} />
                         <span>PIN actualizado correctamente</span>
                     </div>
                 )}
             </section>
 
-            <hr className="border-white/5 my-8" />
-
-            {/* Deploy Information Section */}
-            <section className="space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                    <Cloud className="text-primary" size={20} />
-                    <h2 className="text-lg font-bold text-white">Información de Deploy</h2>
+            {/* ── Deploy Info ──────────────────────────────────── */}
+            <section className="space-y-3">
+                <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                        <Cloud size={14} />
+                    </div>
+                    <h2 className="text-base font-semibold text-foreground">Información de Deploy</h2>
                 </div>
 
-                <div className="bg-bg-card border border-white/5 rounded-xl p-6 space-y-4">
+                <div className="rounded-lg border bg-card/40 border-border/40 p-4 space-y-4 shadow-sm">
                     {currentVersion ? (
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <p className="text-xs text-text-muted mb-1">Fecha de Deploy</p>
-                                    <p className="text-white font-medium">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Fecha de Deploy</p>
+                                    <p className="text-sm font-medium text-foreground">
                                         {new Date(currentVersion.buildDate).toLocaleDateString('es-ES', {
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
+                                            year: 'numeric', month: 'long', day: 'numeric',
+                                            hour: '2-digit', minute: '2-digit'
                                         })}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-text-muted mb-1">Número de Deploy</p>
-                                    <p className="text-white font-medium">#{currentVersion.deployNumber}</p>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Número de Deploy</p>
+                                    <p className="text-sm font-medium text-foreground">#{currentVersion.deployNumber}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-text-muted mb-1">Versión</p>
-                                    <p className="text-white font-mono text-sm">{currentVersion.buildHash}</p>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Versión</p>
+                                    <p className="text-sm font-mono text-foreground">{currentVersion.buildHash}</p>
                                 </div>
                             </div>
-
-                            <div className="pt-4 border-t border-white/5">
+                            <div className="pt-3 border-t border-border/40">
                                 <button
                                     onClick={checkForUpdates}
                                     disabled={isChecking}
-                                    className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="h-9 px-4 bg-muted/60 hover:bg-muted border border-border/40 text-foreground rounded-md text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <RefreshCw size={16} className={isChecking ? 'animate-spin' : ''} />
+                                    <RefreshCw size={14} className={isChecking ? 'animate-spin' : ''} />
                                     {isChecking ? 'Verificando...' : 'Verificar Actualizaciones'}
                                 </button>
                             </div>
                         </>
                     ) : (
-                        <div className="text-center py-4">
-                            <p className="text-text-muted">Cargando información de versión...</p>
+                        <p className="text-sm text-muted-foreground text-center py-3">Cargando información de versión...</p>
+                    )}
+                </div>
+            </section>
+
+            {/* ── Categories ───────────────────────────────────── */}
+            <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                            <Layers size={14} />
+                        </div>
+                        <h2 className="text-base font-semibold text-foreground">Categorías de Actividad</h2>
+                    </div>
+                    <button
+                        onClick={handleNewCategory}
+                        className="h-9 px-3 bg-primary text-primary-foreground font-semibold rounded-md flex items-center gap-1.5 text-sm transition-all hover:opacity-90 active:scale-[0.99]"
+                    >
+                        <Plus size={15} />
+                        Nueva
+                    </button>
+                </div>
+
+                <div className="space-y-1.5">
+                    {categories.map((cat) => (
+                        <div
+                            key={cat.id}
+                            className="group flex items-center gap-3 px-4 py-3 rounded-xl bg-card/40 border border-border/40 hover:bg-card/70 transition-all duration-200"
+                        >
+                            {/* Color icon */}
+                            <div
+                                className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border transition-colors"
+                                style={{
+                                    backgroundColor: `${cat.color}15`,
+                                    borderColor: `${cat.color}25`,
+                                }}
+                            >
+                                <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-foreground">{cat.name}</p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-xs text-muted-foreground">Meta: {cat.target}</span>
+                                    {!cat.enabled && (
+                                        <span className="px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-semibold border border-border/40">
+                                            Inactivo
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Color preview dots (hidden on small screens) */}
+                            <div className="hidden lg:flex gap-1 opacity-40">
+                                {[0.15, 0.35, 0.55, 0.75, 1].map((op, i) => (
+                                    <div
+                                        key={i}
+                                        className="w-2.5 h-2.5 rounded-sm"
+                                        style={{ backgroundColor: cat.color, opacity: op }}
+                                    />
+                                ))}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                    onClick={() => setEditingCategory(cat)}
+                                    className="p-1.5 hover:bg-accent rounded-md text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                                >
+                                    <Edit2 size={14} />
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(cat.id)}
+                                    className="p-1.5 hover:bg-destructive/10 rounded-md text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                                <ChevronRight size={14} className="text-muted-foreground/30 ml-1" />
+                            </div>
+                        </div>
+                    ))}
+
+                    {categories.length === 0 && (
+                        <div className="py-8 text-center text-sm text-muted-foreground">
+                            No hay categorías configuradas.
                         </div>
                     )}
                 </div>
             </section>
 
-            <hr className="border-white/5 my-8" />
-
-            {/* Categories Section */}
-            <section className="space-y-4">
-                <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                        <Layers className="text-primary" size={20} />
-                        <h2 className="text-lg font-bold text-white">Categorías de Actividad</h2>
-                    </div>
-                    <button className="bg-primary hover:bg-primary-hover text-bg-dark font-semibold px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/10 text-sm" onClick={handleNewCategory}>
-                        <Plus size={16} />
-                        Nueva
-                    </button>
-                </div>
-
-                <div className="space-y-4">
-                    {categories.map((cat) => (
-                        <div key={cat.id} className="bg-bg-card border border-white/5 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between group hover:border-primary/30 transition-all gap-4">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-lg flex items-center justify-center border border-white/10" style={{ backgroundColor: `${cat.color}20`, borderColor: `${cat.color}30` }}>
-                                    <div className="w-6 h-6 rounded" style={{ backgroundColor: cat.color }}></div>
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold text-lg text-white">{cat.name}</h3>
-                                    <div className="flex items-center gap-3 mt-1">
-                                        <span className="text-xs px-2 py-0.5 bg-white/10 rounded text-slate-300">Objetivo: {cat.target}</span>
-                                        <span className="flex items-center gap-1 text-xs text-text-muted">
-                                            {cat.enabled ? 'Habilitado' : 'Deshabilitado'}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-8 justify-end">
-                                {/* Preview of color blocks */}
-                                <div className="hidden lg:flex gap-1 opacity-60">
-                                    {[10, 30, 50, 80, 100].map(opacity => (
-                                        <div key={opacity} className="w-3 h-3 rounded-[2px]" style={{ backgroundColor: cat.color, opacity: opacity / 100 }}></div>
-                                    ))}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => setEditingCategory(cat)} className="p-2 hover:bg-white/10 rounded-lg text-text-muted hover:text-primary transition-colors">
-                                        <Edit2 size={20} />
-                                    </button>
-                                    <button onClick={() => handleDelete(cat.id)} className="p-2 hover:bg-white/10 rounded-lg text-text-muted hover:text-red-400 transition-colors">
-                                        <Trash2 size={20} />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
-            {/* Edit Modal */}
+            {/* ── Edit Category Modal ──────────────────────────── */}
             {editingCategory && (
-                <Modal isOpen={true} onClose={() => setEditingCategory(null)} title={`Editar Categoría: ${editingCategory.name}`}>
-                    <div className="space-y-6">
-                        <div>
-                            <label className="block text-sm font-medium text-text-muted mb-2">Nombre de Categoría</label>
+                <Modal
+                    isOpen={true}
+                    onClose={() => setEditingCategory(null)}
+                    title={editingCategory.id.startsWith('temp-') ? 'Nueva Categoría' : `Editar: ${editingCategory.name}`}
+                >
+                    <div className="space-y-5">
+                        {/* Name */}
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nombre</label>
                             <input
                                 type="text"
                                 value={editingCategory.name}
                                 onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
-                                className="w-full bg-bg-dark border border-white/10 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                className="h-10 w-full bg-background border border-input rounded-md px-3 text-sm text-foreground focus:ring-2 focus:ring-ring/30 focus:border-ring outline-none transition-all"
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-text-muted mb-2">Meta Diaria</label>
-                            <div className="flex gap-3">
-                                <input
-                                    type="text"
-                                    value={editingCategory.target}
-                                    onChange={(e) => setEditingCategory({ ...editingCategory, target: e.target.value })}
-                                    className="w-full bg-bg-dark border border-white/10 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                                />
-                            </div>
+                        {/* Target */}
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Meta Diaria</label>
+                            <input
+                                type="text"
+                                value={editingCategory.target}
+                                onChange={(e) => setEditingCategory({ ...editingCategory, target: e.target.value })}
+                                placeholder="ej. 1 hora, 30 min"
+                                className="h-10 w-full bg-background border border-input rounded-md px-3 text-sm text-foreground focus:ring-2 focus:ring-ring/30 focus:border-ring outline-none transition-all"
+                            />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-text-muted mb-2">Color del Mapa de Calor</label>
-                            <div className="flex items-center gap-4 p-4 bg-bg-dark border border-white/10 rounded-xl">
-                                <div className="w-10 h-10 rounded-lg cursor-pointer ring-2 ring-white/20" style={{ backgroundColor: editingCategory.color }}></div>
-                                <input
-                                    type="text"
-                                    value={editingCategory.color}
-                                    onChange={(e) => setEditingCategory({ ...editingCategory, color: e.target.value })}
-                                    className="flex-1 bg-transparent border-none p-0 text-lg font-mono text-white focus:ring-0"
-                                />
-                            </div>
-                            <div className="flex gap-2 mt-4">
-                                {['#f87171', '#fb923c', '#fbbf24', '#30e87a', '#60a5fa', '#818cf8', '#f472b6'].map(color => (
+                        {/* Color — highlight card */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Color del Heatmap</label>
+                            <div
+                                className="p-3 rounded-xl border transition-all"
+                                style={{
+                                    backgroundColor: `${editingCategory.color}15`,
+                                    borderColor: `${editingCategory.color}30`,
+                                }}
+                            >
+                                <div className="flex items-center gap-3">
                                     <div
+                                        className="w-10 h-10 rounded-lg shrink-0 ring-2 ring-white/20"
+                                        style={{ backgroundColor: editingCategory.color }}
+                                    />
+                                    <input
+                                        type="text"
+                                        value={editingCategory.color}
+                                        onChange={(e) => setEditingCategory({ ...editingCategory, color: e.target.value })}
+                                        className="flex-1 bg-transparent border-none p-0 text-base font-mono text-foreground focus:ring-0 outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Color presets */}
+                            <div className="flex gap-2 flex-wrap">
+                                {COLOR_PRESETS.map(color => (
+                                    <button
                                         key={color}
                                         onClick={() => setEditingCategory({ ...editingCategory, color })}
-                                        className={`w-6 h-6 rounded-full cursor-pointer ${editingCategory.color === color ? 'ring-2 ring-white' : ''}`}
+                                        className={`w-7 h-7 rounded-full transition-all ${editingCategory.color === color ? 'ring-2 ring-offset-2 ring-offset-card ring-foreground scale-110' : 'hover:scale-105'}`}
                                         style={{ backgroundColor: color }}
                                     />
                                 ))}
                             </div>
                         </div>
 
-                        <div className="pt-6 flex justify-end gap-3">
-                            <button onClick={() => setEditingCategory(null)} className="px-5 py-2 rounded-lg text-text-muted hover:text-white font-medium transition-colors">Cancelar</button>
-                            <button onClick={handleSaveCategory} className="bg-primary hover:bg-primary-hover text-bg-dark font-bold px-6 py-2 rounded-lg transition-all">Guardar Cambios</button>
+                        {/* Enabled toggle */}
+                        <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/40">
+                            <div>
+                                <p className="text-sm font-medium text-foreground">Categoría activa</p>
+                                <p className="text-xs text-muted-foreground">Aparece en los filtros y formularios</p>
+                            </div>
+                            <button
+                                onClick={() => setEditingCategory({ ...editingCategory, enabled: !editingCategory.enabled })}
+                                className={`relative h-6 w-11 rounded-full transition-colors ${editingCategory.enabled ? 'bg-primary' : 'bg-muted border border-border'}`}
+                            >
+                                <span
+                                    className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${editingCategory.enabled ? 'translate-x-5' : 'translate-x-0'}`}
+                                />
+                            </button>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-2 pt-1 border-t border-border/40">
+                            <button
+                                onClick={handleSaveCategory}
+                                className="flex-1 h-10 bg-primary text-primary-foreground font-semibold rounded-md text-sm hover:opacity-90 transition-all active:scale-[0.99]"
+                            >
+                                Guardar cambios
+                            </button>
+                            <button
+                                onClick={() => setEditingCategory(null)}
+                                className="px-5 h-10 border border-border rounded-md text-sm font-medium text-foreground hover:bg-accent transition-colors"
+                            >
+                                Cancelar
+                            </button>
                         </div>
                     </div>
                 </Modal>

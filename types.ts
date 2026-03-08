@@ -34,7 +34,7 @@ export interface NavItem {
 
 export enum Page {
   OVERVIEW = 'overview',
-  ANALYTICS = 'analytics',
+  FOCUS = 'focus',
   LOGS = 'logs',
   ALERTS = 'alerts',
   SETTINGS = 'settings',
@@ -46,4 +46,14 @@ export interface Category {
   target: string;
   enabled: boolean;
   color: string;
+}
+
+export interface TimerSession {
+  id?: string;
+  categoryId: string;
+  category: string;
+  startedAt: string;
+  endedAt: string;
+  durationSec: number;
+  note?: string;
 }

@@ -18,6 +18,16 @@ export interface Category {
     color: string;
 }
 
+export interface TimerSession {
+    id?: string;
+    categoryId: string;
+    category: string;
+    startedAt: string;
+    endedAt: string;
+    durationSec: number;
+    note?: string;
+}
+
 const BASE = '/api/v1';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -78,6 +88,28 @@ export const api = {
 
         delete: (id: string) =>
             request<{ success: boolean }>(`/categories?id=${encodeURIComponent(id)}`, {
+                method: 'DELETE',
+            }),
+    },
+
+    timerSessions: {
+        getAll: (categoryId?: string) =>
+            request<TimerSession[]>(`/timer-sessions${categoryId && categoryId !== 'all' ? `?categoryId=${encodeURIComponent(categoryId)}` : ''}`),
+
+        create: (data: Omit<TimerSession, 'id'>) =>
+            request<TimerSession>('/timer-sessions', {
+                method: 'POST',
+                body: JSON.stringify(data),
+            }),
+
+        update: (id: string, data: Partial<TimerSession>) =>
+            request<TimerSession>('/timer-sessions', {
+                method: 'PUT',
+                body: JSON.stringify({ id, ...data }),
+            }),
+
+        delete: (id: string) =>
+            request<{ success: boolean }>(`/timer-sessions?id=${encodeURIComponent(id)}`, {
                 method: 'DELETE',
             }),
     },

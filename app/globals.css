@@ -2,13 +2,91 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-bg: rgba(28, 25, 23, 0.7);
-  /* Warm Black base */
+@layer base {
+  :root {
+    /* Light mode */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 15%;
+    --primary: 221 83% 53%;
+    /* Blue */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Dark mode */
+    --background: 0 0% 6%;
+    /* #0f0f0f */
+    --foreground: 0 0% 98%;
+    /* #fafafa */
+    --card: 0 0% 9%;
+    /* #171717 slightly lighter than bg */
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 217 91% 60%;
+    /* Vibrant blue #3b82f6 */
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 32% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 0 0% 15%;
+    /* #262626 */
+    --muted-foreground: 0 0% 65%;
+    /* #a3a3a3 */
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 0 0% 20%;
+    /* #333333 */
+    --input: 0 0% 20%;
+    --ring: 217 91% 60%;
+  }
 }
 
-/* Custom Scrollbar */
+@layer base {
+  * {
+    border-color: hsl(var(--border) / 0.5);
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+}
+
+html {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ============================================================
+   CUSTOM SCROLLBAR
+   ============================================================ */
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -19,62 +97,97 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #44403C;
-  /* Stone 700 */
+  background: hsl(var(--muted));
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #CA8A04;
-  /* Gold */
+  background: hsl(var(--primary));
 }
 
-body {
-  background-color: #1C1917;
-  /* Warm Black */
-  color: #FAFAF9;
-  /* Off-white */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
-  max-width: 100%;
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-html {
-  overflow-x: hidden;
-  max-width: 100%;
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-/* Glassmorphism Utilities */
-.glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
-.glass-card {
-  background: rgba(41, 37, 36, 0.6);
-  /* Warm Dark Grey (Stone 800) transparent */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+@keyframes zoom-in-95 {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-/* Accessibility: Focus States */
-*:focus-visible {
-  outline: 2px solid #22C55E;
-  outline-offset: 2px;
-  border-radius: 4px;
+.fade-in {
+  animation: fade-in-up 0.4s ease-out both;
 }
 
-/* Mobile Enhancements */
+.slide-in {
+  animation: slide-in-right 0.3s ease-out both;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.modal-enter {
+  animation: zoom-in-95 0.2s ease-out both;
+}
+
+/* ============================================================
+   SAFE AREAS (iOS)
+   ============================================================ */
+.safe-area-pt {
+  padding-top: max(59px, env(safe-area-inset-top));
+}
+
+.safe-area-pb {
+  padding-bottom: max(34px, env(safe-area-inset-bottom));
+}
+
 .tap-highlight-transparent {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Smooth transitions for reduced motion */
 @media (prefers-reduced-motion: reduce) {
 
   *,

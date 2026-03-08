@@ -12,27 +12,34 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center md:justify-end">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
 
-      {/* Panel */}
-      <aside className="relative w-full max-w-full md:w-[480px] bg-bg-card h-full shadow-2xl flex flex-col border-l border-white/10 animate-in slide-in-from-right duration-300 overflow-x-hidden">
-        <div className="p-6 pt-[calc(2rem+env(safe-area-inset-top))] border-b border-white/10 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-white">{title}</h2>
-          </div>
+      {/* Panel — centered, rounded-3xl (Finance style) */}
+      <div
+        className="modal-enter relative w-full max-w-md bg-card border border-border/60 rounded-3xl shadow-lg flex flex-col overflow-hidden max-h-[90vh]"
+        style={{ boxShadow: '0 1px 3px 0px hsl(0 0% 0% / 0.20), 0 8px 24px -4px hsl(0 0% 0% / 0.30)' }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border/40">
+          <h2 className="text-lg font-semibold text-foreground leading-none tracking-tight">{title}</h2>
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors text-text-muted hover:text-white"
+            className="h-8 w-8 rounded-full hover:bg-accent flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-6">
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {children}
         </div>
-      </aside>
+      </div>
     </div>
   );
 };

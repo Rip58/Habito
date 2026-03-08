@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Overview } from './views/Overview';
-import { Analytics } from './views/Analytics';
+import { Focus } from './views/Focus';
 import { Settings } from './views/Settings';
 import { MobileHeader } from './components/MobileHeader';
 import { BottomNav } from './components/BottomNav';
@@ -60,8 +60,8 @@ const App: React.FC = () => {
     switch (currentPage) {
       case Page.OVERVIEW:
         return <Overview categories={categories} onCategoriesChange={fetchCategories} />;
-      case Page.ANALYTICS:
-        return <Analytics />;
+      case Page.FOCUS:
+        return <Focus categories={categories} onCategoriesChange={fetchCategories} />;
       case Page.SETTINGS:
         return (
           <Settings
@@ -74,7 +74,7 @@ const App: React.FC = () => {
         );
       default:
         return (
-          <div className="flex items-center justify-center h-full text-text-muted">
+          <div className="flex items-center justify-center h-full text-muted-foreground">
             <div className="text-center">
               <h2 className="text-2xl font-bold mb-2">Próximamente</h2>
               <p>La página {currentPage} está en construcción.</p>
@@ -90,7 +90,7 @@ const App: React.FC = () => {
 
   return (
     <VersionCheck>
-      <div className="flex flex-col h-screen font-sans text-white bg-bg-dark overflow-hidden max-w-full">
+      <div className="flex flex-col h-screen font-sans text-foreground bg-background overflow-hidden max-w-full">
         <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative w-full max-w-full pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8">
           <MobileHeader />

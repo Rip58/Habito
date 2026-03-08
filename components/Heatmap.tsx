@@ -90,72 +90,67 @@ export const Heatmap: React.FC<HeatmapProps> = ({
   }, [data]);
 
   const getStyle = (level: number) => {
-    if (level === 0) return { className: 'bg-white/5', style: {} };
+    if (level === 0) return { className: 'bg-foreground/5 dark:bg-foreground/10', style: {} };
 
     if (customColor) {
       const rgb = hexToRgb(customColor);
       if (rgb) {
         const { r, g, b } = rgb;
-        let alpha = 0.2;
-        if (level === 2) alpha = 0.4;
-        if (level === 3) alpha = 0.7;
-        if (level === 4) alpha = 1;
-        return {
-          className: '',
-          style: { backgroundColor: `rgba(${r}, ${g}, ${b}, ${alpha})` }
-        };
+        // Opacidades más marcadas para que se vean bien
+        const alphas = [0.05, 0.4, 0.65, 0.85, 1];
+        const alpha = alphas[level] || 1;
+        if (level === 0) return { className: 'bg-foreground/5 dark:bg-foreground/10', style: {} };
+        return { className: '', style: { backgroundColor: `rgba(${r}, ${g}, ${b}, ${alpha})` } };
       }
     }
 
     switch (level) {
-      case 1: return { className: 'bg-primary/20', style: {} };
-      case 2: return { className: 'bg-primary/40', style: {} };
-      case 3: return { className: 'bg-primary/70', style: {} };
+      case 1: return { className: 'bg-primary/40', style: {} };
+      case 2: return { className: 'bg-primary/65', style: {} };
+      case 3: return { className: 'bg-primary/85', style: {} };
       case 4: return { className: 'bg-primary', style: {} };
-      default: return { className: 'bg-white/5', style: {} };
+      default: return { className: 'bg-foreground/5 dark:bg-foreground/10', style: {} };
     }
   };
 
   return (
     <div className="flex flex-col w-full h-full">
-      {/* Header with Title, Filters, and Actions */}
-      <div className="flex flex-col gap-4 mb-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      {/* Header */}
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            {title && <h2 className="text-lg font-bold text-text-primary">{title}</h2>}
-            {subtitle && <p className="text-text-muted text-sm">{subtitle}</p>}
+            {title && <h2 className="text-base font-semibold text-foreground">{title}</h2>}
+            {subtitle && <p className="text-muted-foreground text-sm">{subtitle}</p>}
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Category Selector */}
             {categories.length > 0 && onCategoryChange && (
-              <div className="relative z-20">
+              <div className="relative">
                 <select
                   value={selectedCategory}
                   onChange={(e) => onCategoryChange(e.target.value)}
-                  className="appearance-none bg-white/5 border border-white/5 text-xs text-text-muted font-medium rounded-lg pl-3 pr-8 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/50 cursor-pointer hover:bg-white/10 transition-colors"
+                  className="appearance-none bg-muted/60 border border-border/40 text-xs text-muted-foreground font-medium rounded-md pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer hover:bg-muted transition-colors"
                 >
                   <option value="all">Todas</option>
                   {categories.map(cat => (
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
                 </select>
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
-                  <Filter size={12} />
-                </div>
+                <Filter size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               </div>
             )}
 
-            {/* Time Range Filter */}
+            {/* Time Range — shadcn Tabs style */}
             {onTimeRangeChange && (
-              <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-white/5">
+              <div className="flex items-center gap-0.5 bg-muted/60 p-1 rounded-md border border-border/40">
                 {(['1M', '3M', '6M', '12M'] as const).map((range) => (
                   <button
                     key={range}
                     onClick={() => onTimeRangeChange(range)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 ${timeRange === range
-                      ? 'bg-primary text-bg-dark shadow-sm'
-                      : 'text-text-muted hover:text-text-primary hover:bg-white/5'
+                    className={`px-2.5 py-1 rounded-sm text-xs font-medium transition-all duration-200 ${timeRange === range
+                      ? 'bg-card shadow-sm text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
                       }`}
                   >
                     {range}
@@ -168,66 +163,61 @@ export const Heatmap: React.FC<HeatmapProps> = ({
 
         {/* Intensity Legend */}
         <div className="flex justify-end w-full">
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-text-muted font-medium">Menos</span>
-            <div className="flex gap-1.5">
-              {[0, 1, 2, 3, 4].map((level) => {
+          <div className="flex items-center gap-2 group cursor-help" title="Sin eventos vs 1 o más eventos">
+            <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">Menos</span>
+            <div className="flex gap-1">
+              {[0, 4].map((level) => {
                 const { className, style } = getStyle(level);
                 return (
                   <div
                     key={level}
-                    className={`w-3 h-3 rounded-sm ${className} border border-white/10`}
+                    className={`w-3 h-3 rounded-sm ${className} border border-border/20 shadow-sm`}
                     style={style}
-                  ></div>
+                  />
                 );
               })}
             </div>
-            <span className="text-xs text-text-muted font-medium">Más</span>
+            <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">Más</span>
           </div>
         </div>
       </div>
 
-      {/* Heatmap Grid Container */}
-      <div className="w-full overflow-x-auto">
-        <div className="relative min-w-full">
+      {/* Heatmap Grid */}
+      <div className="w-full">
+        <div className="relative w-full">
           {/* Month Labels */}
-          <div className="flex text-[10px] font-medium text-text-muted mb-3 relative h-4 w-full">
+          <div className="flex text-[10px] font-medium text-muted-foreground mb-2 relative h-4 w-full">
             {monthLabels.map((m, i) => {
               const leftPos = (m.weekIndex / weeks.length) * 100;
               if (i > 0 && (m.weekIndex - monthLabels[i - 1].weekIndex) < 4) return null;
               return (
-                <span key={i} style={{ left: `${leftPos}%` }} className="absolute">
+                <span key={i} style={{ left: `${leftPos}%` }} className="absolute -translate-x-1/2">
                   {m.name}
                 </span>
               );
             })}
           </div>
 
-          {/* Heatmap Cells */}
-          <div className="flex gap-1 w-full">
+          {/* Cells */}
+          <div className="flex gap-[2px] sm:gap-[3px] w-full justify-between">
             {weeks.map((week, wIndex) => (
-              <div key={wIndex} className="flex flex-col gap-1 flex-1 min-w-[10px]">
+              <div key={wIndex} className="flex flex-col gap-[2px] sm:gap-[3px] flex-1 min-w-[4px]">
                 {week.map((day, dIndex) => {
-                  const isWeekend = dIndex >= 5;
                   const { className, style } = day ? getStyle(day.level) : { className: 'opacity-0', style: {} };
-
                   return (
                     <div
                       key={`${wIndex}-${dIndex}`}
                       onClick={() => day && onDayClick && onDayClick(day.date)}
                       className={`
-                        relative aspect-square rounded-md w-full 
+                        relative aspect-square rounded-[2px] w-full group transition-all duration-200
                         ${className}
-                        ${isWeekend && day ? 'ring-1 ring-white/5' : ''} 
-                        group
-                        transition-all duration-200
-                        ${day ? 'cursor-pointer hover:scale-110 hover:shadow-lg hover:shadow-primary/20 hover:z-20 hover:ring-2 hover:ring-primary/50' : ''}
+                        ${day ? 'cursor-pointer hover:scale-[1.3] hover:z-20 hover:ring-1 hover:ring-border/50 hover:shadow-md' : ''}
                       `}
                       style={style}
-                      title={day ? `${day.date}: ${day.count} eventos` : undefined}
+                      title={day ? `${day.date}: ${day.count} eventos (Nivel ${day.level})` : undefined}
                     >
                       {day && (
-                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-white/10 rounded-md transition-opacity pointer-events-none"></div>
+                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-white/20 rounded-[2px] transition-opacity pointer-events-none" />
                       )}
                     </div>
                   );
