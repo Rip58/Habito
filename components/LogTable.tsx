@@ -100,7 +100,7 @@ const LogTableRow: React.FC<{ log: ActivityLog; category?: Category; onEdit?: (l
 };
 
 export const LogTable: React.FC<LogTableProps> = ({ logs, categories = [], onEdit, onDelete }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { SummaryCards } from '../components/SummaryCards';
 import { Heatmap } from '../components/Heatmap';
 import { LogTable } from '../components/LogTable';
-import { Plus, Calendar } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { Category, HeatmapDay, ActivityLog } from '../types';
 import { api, Log } from '../lib/api';
@@ -15,9 +15,33 @@ interface OverviewProps {
 
 export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategoriesChange }) => {
     const [logs, setLogs] = useState<ActivityLog[]>([]);
-    const [filterCategory, setFilterCategory] = useState<string>('all');
     const [heatmapTimeRange, setHeatmapTimeRange] = useState<'1M' | '3M' | '6M' | '12M'>('12M');
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+    const [selectedAccount, setSelectedAccount] = useState(
+        () => (typeof window !== 'undefined' && localStorage.getItem('habito_selected_account')) || 'all'
+    );
+    const [isHeatmapExpanded, setIsHeatmapExpanded] = useState(true);
+
+    // Ratio selector (header button + popover)
+    const [isRatioOpen, setIsRatioOpen] = useState(false);
+    const [ratioNum, setRatioNum] = useState(
+        () => (typeof window !== 'undefined' && localStorage.getItem('habito_ratio_num')) || categories[0]?.id || 'all'
+    );
+    const [ratioDenom, setRatioDenom] = useState(
+        () => (typeof window !== 'undefined' && localStorage.getItem('habito_ratio_denom')) || categories[1]?.id || 'all'
+    );
+
+    useEffect(() => {
+        localStorage.setItem('habito_selected_account', selectedAccount);
+    }, [selectedAccount]);
+
+    useEffect(() => {
+        localStorage.setItem('habito_ratio_num', ratioNum);
+    }, [ratioNum]);
+
+    useEffect(() => {
+        localStorage.setItem('habito_ratio_denom', ratioDenom);
+    }, [ratioDenom]);
 
     const fetchLogs = useCallback(async () => {
         try {
@@ -37,12 +61,9 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
 
-    // Generate heatmap data
-    const heatmapData: HeatmapDay[] = (() => {
-        let filteredLogs = logs;
-        if (filterCategory !== 'all') {
-            filteredLogs = logs.filter(log => (log.categoryId === filterCategory) || (log.category === filterCategory));
-        }
+    // Generate heatmap data for a single category (each habit gets its own heatmap)
+    const getHeatmapData = (categoryId: string): HeatmapDay[] => {
+        const filteredLogs = logs.filter(log => (log.categoryId === categoryId) || (log.category === categoryId));
         const daysMap = new Map<string, number>();
         filteredLogs.forEach(log => {
             if (log.dateObj) {
@@ -77,7 +98,7 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
             loopDate.setUTCDate(loopDate.getUTCDate() + 1);
         }
         return days;
-    })();
+    };
 
     // Log Modal state
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
@@ -161,9 +182,19 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
     };
 
     const currentYear = new Date().getFullYear();
-    const selectedCategoryColor = categories.find(c => c.id === filterCategory)?.color;
+    const enabledCategories = categories.filter(c => c.enabled);
+    const heatmapCategories = selectedAccount === 'all'
+        ? enabledCategories
+        : enabledCategories.filter(c => c.id === selectedAccount);
+
+    const getFilteredLogCount = (categoryId: string) =>
+        categoryId === 'all' ? logs.length : logs.filter(l => (l.categoryId === categoryId) || (l.category === categoryId)).length;
+    const ratioNumCount = getFilteredLogCount(ratioNum);
+    const ratioDenomCount = getFilteredLogCount(ratioDenom);
+    const ratioPercent = ratioDenomCount === 0 ? 0 : Math.round((ratioNumCount / ratioDenomCount) * 100);
 
     return (
+        <>
         <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-5 fade-in">
 
             {/* Page Header */}
@@ -176,6 +207,67 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <select
+                            value={selectedAccount}
+                            onChange={(e) => setSelectedAccount(e.target.value)}
+                            className="h-10 appearance-none bg-muted/60 border border-border/40 hover:border-border text-sm font-medium text-foreground rounded-md pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer transition-colors"
+                        >
+                            <option value="all">Todas las cuentas</option>
+                            {enabledCategories.map(cat => (
+                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                        </select>
+                        <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    </div>
+
+                    {/* Ratio selector — button that opens a popover to pick the two categories to compare */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsRatioOpen(!isRatioOpen)}
+                            className="h-10 bg-muted/60 border border-border/40 hover:border-border text-sm font-medium text-foreground rounded-md pl-3 pr-3 flex items-center gap-2 transition-colors"
+                        >
+                            <Zap size={14} className="text-primary" />
+                            <span>Ratio</span>
+                            <span className="text-muted-foreground tabular-nums">{ratioPercent}%</span>
+                            <ChevronDown size={14} className={`text-muted-foreground transition-transform ${isRatioOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isRatioOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setIsRatioOpen(false)} />
+                                <div className="absolute right-0 top-full mt-2 w-64 rounded-lg border bg-card border-border/60 shadow-lg p-4 z-50">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Comparar cuentas</p>
+                                    <div className="flex flex-col gap-1.5 mb-3">
+                                        <select
+                                            value={ratioNum}
+                                            onChange={(e) => setRatioNum(e.target.value)}
+                                            className="appearance-none bg-muted/60 border border-border/40 hover:border-border text-xs font-semibold text-foreground rounded-md pl-2.5 pr-6 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer transition-colors"
+                                        >
+                                            <option value="all">Todas</option>
+                                            {enabledCategories.map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                            ))}
+                                        </select>
+                                        <div className="h-px bg-border/40 w-full" />
+                                        <select
+                                            value={ratioDenom}
+                                            onChange={(e) => setRatioDenom(e.target.value)}
+                                            className="appearance-none bg-muted/60 border border-border/40 hover:border-border text-xs font-semibold text-foreground rounded-md pl-2.5 pr-6 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer transition-colors"
+                                        >
+                                            <option value="all">Todas</option>
+                                            {enabledCategories.map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <span className="text-2xl font-semibold text-foreground tabular-nums">{ratioPercent}%</span>
+                                    <p className="text-xs text-muted-foreground mt-1 font-medium">{ratioNumCount} / {ratioDenomCount} eventos</p>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
                     <button
                         onClick={() => {
                             setEditingLogId(null);
@@ -193,26 +285,58 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
             </div>
 
             {/* Summary Cards */}
-            <SummaryCards logs={logs} categories={categories} />
+            <SummaryCards logs={logs} categories={categories} selectedCategory={selectedAccount} />
 
             {/* Main Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
 
-                {/* Heatmap (8/12) */}
-                <div className="lg:col-span-8">
-                    <div className="rounded-lg border bg-card/40 border-border/40 p-5 h-full shadow-sm">
-                        <Heatmap
-                            data={heatmapData}
-                            title="Mapa de Actividad"
-                            customColor={selectedCategoryColor}
-                            onDayClick={(date) => setViewingDate(date)}
-                            timeRange={heatmapTimeRange}
-                            onTimeRangeChange={setHeatmapTimeRange}
-                            categories={categories}
-                            selectedCategory={filterCategory}
-                            onCategoryChange={setFilterCategory}
-                        />
+                {/* Heatmaps — one per habit, filtered by the selected account (8/12) */}
+                <div className="lg:col-span-8 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <button
+                            onClick={() => setIsHeatmapExpanded(!isHeatmapExpanded)}
+                            className="flex items-center gap-1.5 text-base font-semibold text-foreground hover:text-foreground/80 transition-colors"
+                        >
+                            <span>Mapa de Actividad</span>
+                            {isHeatmapExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        {isHeatmapExpanded && (
+                            <div className="flex items-center gap-0.5 bg-muted/60 p-1 rounded-md border border-border/40">
+                                {(['1M', '3M', '6M', '12M'] as const).map((range) => (
+                                    <button
+                                        key={range}
+                                        onClick={() => setHeatmapTimeRange(range)}
+                                        className={`px-2.5 py-1 rounded-sm text-xs font-medium transition-all duration-200 ${heatmapTimeRange === range
+                                            ? 'bg-card shadow-sm text-foreground'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                            }`}
+                                    >
+                                        {range}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
+
+                    {isHeatmapExpanded && (
+                        heatmapCategories.length === 0 ? (
+                            <div className="rounded-lg border bg-card/40 border-border/40 p-8 text-center shadow-sm">
+                                <p className="text-sm text-muted-foreground">Crea una categoría para ver su mapa de actividad.</p>
+                            </div>
+                        ) : (
+                            heatmapCategories.map(cat => (
+                                <div key={cat.id} className="rounded-lg border bg-card/40 border-border/40 p-5 shadow-sm">
+                                    <Heatmap
+                                        data={getHeatmapData(cat.id)}
+                                        title={cat.name}
+                                        customColor={cat.color}
+                                        onDayClick={(date) => setViewingDate(date)}
+                                        timeRange={heatmapTimeRange}
+                                    />
+                                </div>
+                            ))
+                        )
+                    )}
                 </div>
 
                 {/* Log Table (4/12) */}
@@ -227,6 +351,10 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                     </div>
                 </div>
             </div>
+        </div>
+
+            {/* Modals render outside the fade-in wrapper — its animation leaves a
+                permanent `transform`, which would break position:fixed on descendants. */}
 
             {/* ── Day Detail Modal ─────────────────────────────── */}
             <Modal
@@ -398,6 +526,6 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                     </div>
                 </div>
             </Modal>
-        </div>
+        </>
     );
 };
