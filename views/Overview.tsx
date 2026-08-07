@@ -198,15 +198,31 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
         <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-5 fade-in">
 
             {/* Page Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                <div>
-                    <h1 className="text-2xl font-semibold text-foreground tracking-tight">Resumen</h1>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                        {`1 Ene, ${currentYear} – 31 Dic, ${currentYear}`}
-                    </p>
+            <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-3">
+                    <div>
+                        <h1 className="text-2xl font-semibold text-foreground tracking-tight">Resumen</h1>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                            {`1 Ene, ${currentYear} – 31 Dic, ${currentYear}`}
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={() => {
+                            setEditingLogId(null);
+                            setSelectedDate(getTodayStr());
+                            setNote('');
+                            setCount(1);
+                            setIsLogModalOpen(true);
+                        }}
+                        className="h-10 bg-primary text-primary-foreground font-semibold px-4 rounded-md text-sm transition-all flex items-center gap-2 hover:opacity-90 active:scale-[0.99] shrink-0"
+                    >
+                        <Plus size={16} />
+                        <span>Registrar</span>
+                    </button>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <div className="relative">
                         <select
                             value={selectedAccount}
@@ -267,20 +283,6 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                             </>
                         )}
                     </div>
-
-                    <button
-                        onClick={() => {
-                            setEditingLogId(null);
-                            setSelectedDate(getTodayStr());
-                            setNote('');
-                            setCount(1);
-                            setIsLogModalOpen(true);
-                        }}
-                        className="h-10 bg-primary text-primary-foreground font-semibold px-4 rounded-md text-sm transition-all flex items-center gap-2 hover:opacity-90 active:scale-[0.99]"
-                    >
-                        <Plus size={16} />
-                        <span>Registrar</span>
-                    </button>
                 </div>
             </div>
 
