@@ -16,6 +16,23 @@ const STORAGE_CAT_ID = 'habito_focus_cat_id';
 const STORAGE_PAUSED = 'habito_focus_paused';
 const STORAGE_ELAPSED = 'habito_focus_elapsed'; // stores paused elapsed time
 
+const RING_RADIUS = 118;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
+// Category.target es texto libre ("3 horas", "45 min", "1 sesión"). Si expresa
+// tiempo lo convertimos a segundos para poder dibujar el progreso; si no,
+// devolvemos null y el anillo se queda liso.
+const parseTargetSeconds = (target?: string): number | null => {
+    if (!target) return null;
+    const normalized = target.toLowerCase();
+    const hours = normalized.match(/(\d+(?:[.,]\d+)?)\s*(?:h\b|horas?)/);
+    const minutes = normalized.match(/(\d+(?:[.,]\d+)?)\s*(?:m\b|min|minutos?)/);
+    if (!hours && !minutes) return null;
+    const toNumber = (m: RegExpMatchArray | null) => (m ? parseFloat(m[1].replace(',', '.')) : 0);
+    const seconds = toNumber(hours) * 3600 + toNumber(minutes) * 60;
+    return seconds > 0 ? seconds : null;
+};
+
 export const FocusTimer: React.FC<FocusTimerProps> = ({ categories, onSessionComplete, onCategoriesChange }) => {
     const [isActive, setIsActive] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
@@ -222,6 +239,8 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({ categories, onSessionCom
     };
 
     const activeCat = categories.find(c => c.id === selectedCategoryId);
+    const targetSeconds = parseTargetSeconds(activeCat?.target);
+    const progress = targetSeconds ? Math.min(1, elapsedSec / targetSeconds) : 0;
 
     return (
         <div className="bg-card border border-border shadow-sm rounded-3xl p-8 flex flex-col items-center justify-center space-y-8 max-w-lg mx-auto w-full transition-all">
@@ -256,22 +275,51 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({ categories, onSessionCom
                 </div>
             </div>
 
-            {/* Timer Display */}
-            <div className="relative flex items-center justify-center w-64 h-64 rounded-full border-4 border-border/40 bg-background/50 overflow-hidden group">
-                {/* Colored pulse effect when active */}
-                {isActive && !isPaused && activeCat && (
-                    <div className="absolute inset-0 opacity-10 animate-pulse" style={{ backgroundColor: activeCat.color }}></div>
-                )}
+            {/* Timer Display — el anillo marca el progreso contra la meta diaria */}
+            <div className="relative flex items-center justify-center w-64 h-64">
+                <svg width="256" height="256" viewBox="0 0 256 256" className="absolute inset-0 -rotate-90" aria-hidden="true">
+                    <circle cx="128" cy="128" r={RING_RADIUS} fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
+                    {targetSeconds && (
+                        <circle
+                            cx="128" cy="128" r={RING_RADIUS}
+                            fill="none"
+                            stroke={activeCat?.color ?? 'hsl(var(--primary))'}
+                            strokeWidth="8"
+                            strokeLinecap="round"
+                            strokeDasharray={RING_CIRCUMFERENCE}
+                            strokeDashoffset={RING_CIRCUMFERENCE * (1 - progress)}
+                            className="transition-[stroke-dashoffset] duration-1000 ease-linear"
+                        />
+                    )}
+                </svg>
 
-                <div className="z-10 text-center font-mono">
-                    <div className="text-6xl font-bold tracking-tighter text-foreground" style={{ color: isActive && !isPaused && activeCat ? activeCat.color : undefined }}>
+                <div
+                    className="z-10 flex flex-col items-center gap-2 text-center"
+                    role="timer"
+                    aria-live="off"
+                    aria-label={`Tiempo transcurrido: ${formatTime(elapsedSec)}`}
+                >
+                    <span
+                        className="font-mono text-[2.75rem] leading-none font-bold tracking-tighter text-foreground tabular-nums"
+                        style={{ color: isActive && !isPaused && activeCat ? activeCat.color : undefined }}
+                    >
                         {formatTime(elapsedSec)}
-                    </div>
+                    </span>
+                    {targetSeconds && activeCat && (
+                        <div className="flex flex-col items-center gap-0.5">
+                            <span className="text-sm font-semibold text-foreground tabular-nums">
+                                {Math.round(progress * 100)}% de tu meta
+                            </span>
+                            <span className="text-xs font-medium text-muted-foreground">
+                                Meta diaria: {activeCat.target}
+                            </span>
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* Controls */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 w-full justify-center">
                 {!isActive ? (
                     <button
                         onClick={handleStart}
@@ -285,23 +333,27 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({ categories, onSessionCom
                         {isPaused ? (
                             <button
                                 onClick={handleResume}
-                                className="bg-blue-500 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all"
+                                aria-label="Reanudar"
+                                className="border border-input text-foreground rounded-full w-14 h-14 flex items-center justify-center hover:bg-accent active:scale-95 transition-all shrink-0"
                             >
-                                <Play size={24} fill="currentColor" className="ml-1" />
+                                <Play size={22} fill="currentColor" className="ml-0.5" />
                             </button>
                         ) : (
                             <button
                                 onClick={handlePause}
-                                className="bg-amber-500 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all"
+                                aria-label="Pausar"
+                                className="border border-input text-foreground rounded-full w-14 h-14 flex items-center justify-center hover:bg-accent active:scale-95 transition-all shrink-0"
                             >
-                                <Pause size={24} fill="currentColor" />
+                                <Pause size={22} fill="currentColor" />
                             </button>
                         )}
+                        {/* Parar abre el formulario de guardado: no es una acción destructiva */}
                         <button
                             onClick={handleStop}
-                            className="bg-destructive text-destructive-foreground rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all"
+                            className="flex-1 h-14 px-6 bg-primary text-primary-foreground font-bold rounded-full flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.99] transition-all"
                         >
-                            <Square size={20} fill="currentColor" />
+                            <Square size={17} fill="currentColor" />
+                            Terminar y guardar
                         </button>
                     </>
                 )}

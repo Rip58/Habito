@@ -1,55 +1,32 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-interface VersionInfo {
-    buildHash: string;
-    buildDate: string;
-    deployNumber: number;
+// Identificador único POR DESPLIEGUE.
+//
+// Antes era `base64(fecha ISO).substring(0, 12)`, que son los primeros 9 bytes
+// de la cadena: "2026-08-2". Es decir, cambiaba una vez al día, no una vez por
+// build — dos despliegues el mismo día compartían identificador y la
+// comprobación de actualizaciones no detectaba nada.
+function buildId(): string {
+    const deployment = process.env.VERCEL_DEPLOYMENT_ID?.replace(/^dpl_/, '');
+    if (deployment) return deployment.slice(0, 12);
+    const sha = process.env.VERCEL_GIT_COMMIT_SHA;
+    if (sha) return sha.slice(0, 12);
+    return crypto.randomBytes(6).toString('hex');
 }
 
-function generateVersion(): VersionInfo {
-    const now = new Date();
+const version = {
+    buildId: buildId(),
+    commit: (process.env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 7),
+    buildDate: new Date().toISOString(),
+};
 
-    // Generate a unique hash based on timestamp
-    const buildHash = Buffer.from(now.toISOString()).toString('base64').substring(0, 12);
+const target = path.join(__dirname, '..', 'public', 'version.json');
+fs.mkdirSync(path.dirname(target), { recursive: true });
+fs.writeFileSync(target, `${JSON.stringify(version, null, 2)}\n`);
 
-    // Format build date
-    const buildDate = now.toISOString();
-
-    // For deploy number, we'll use a simple counter
-    // In production, Vercel will generate a new build each time
-    const deployNumber = parseInt(process.env.VERCEL_DEPLOYMENT_ID?.substring(0, 8) || Date.now().toString().substring(0, 8), 16) % 10000;
-
-    return {
-        buildHash,
-        buildDate,
-        deployNumber
-    };
-}
-
-function main() {
-    const versionInfo = generateVersion();
-
-    // Write to public directory so it's accessible via HTTP
-    const publicDir = path.join(__dirname, '..', 'public');
-
-    // Create public directory if it doesn't exist
-    if (!fs.existsSync(publicDir)) {
-        fs.mkdirSync(publicDir, { recursive: true });
-    }
-
-    const versionPath = path.join(publicDir, 'version.json');
-
-    fs.writeFileSync(versionPath, JSON.stringify(versionInfo, null, 2));
-
-    console.log('✅ Version file generated:');
-    console.log(`   Build Hash: ${versionInfo.buildHash}`);
-    console.log(`   Build Date: ${versionInfo.buildDate}`);
-    console.log(`   Deploy #${versionInfo.deployNumber}`);
-}
-
-main();
+console.log(`✅ version.json — build ${version.buildId}${version.commit ? ` · commit ${version.commit}` : ' · local'} · ${version.buildDate}`);

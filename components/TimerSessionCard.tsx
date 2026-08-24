@@ -39,13 +39,13 @@ export const TimerSessionCard: React.FC<TimerSessionCardProps> = ({ session, cat
     const hasNote = !!session.note;
 
     return (
-        <div className="border-b border-border/40 last:border-b-0 group">
+        <div className="border-b border-border last:border-b-0 group">
             <div
-                className={`flex items-center justify-between p-3 rounded-xl transition-colors ${hasNote ? 'cursor-pointer hover:bg-muted/50' : ''} ${isExpanded ? 'bg-muted/30' : ''}`}
+                className={`flex items-center justify-between p-3 rounded-xl transition-colors ${hasNote ? 'cursor-pointer hover:bg-muted' : ''} ${isExpanded ? 'bg-muted' : ''}`}
                 onClick={() => hasNote && setIsExpanded(!isExpanded)}
             >
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center border border-border/40 shrink-0" style={{ backgroundColor: `${categoryColor}15` }}>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center border border-border shrink-0" style={{ backgroundColor: `${categoryColor}15` }}>
                         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: categoryColor }}></div>
                     </div>
 
@@ -82,7 +82,7 @@ export const TimerSessionCard: React.FC<TimerSessionCardProps> = ({ session, cat
 
             {isExpanded && hasNote && (
                 <div className="px-14 pb-4 pt-1 animate-in slide-in-from-top-2 duration-200">
-                    <div className="text-sm text-muted-foreground bg-muted/40 p-3 rounded-lg border border-border/50 italic">
+                    <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg border border-border italic">
                         {session.note}
                     </div>
                 </div>

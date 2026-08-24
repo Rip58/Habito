@@ -22,9 +22,9 @@ const LogTableRow: React.FC<{ log: ActivityLog; category?: Category; onEdit?: (l
   const isCustomNote = log.eventName && log.eventName !== defaultEventName;
 
   return (
-    <div className="border-b border-border/40 last:border-b-0 group">
+    <div className="border-b border-border last:border-b-0 group">
       <div
-        className={`flex items-center justify-between p-3 rounded-xl transition-colors ${isCustomNote ? 'cursor-pointer hover:bg-muted/50' : ''} ${isExpanded ? 'bg-muted/30' : ''}`}
+        className={`flex items-center justify-between p-3 rounded-xl transition-colors ${isCustomNote ? 'cursor-pointer hover:bg-muted' : ''} ${isExpanded ? 'bg-muted' : ''}`}
         onClick={() => isCustomNote && setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-4">
@@ -49,7 +49,7 @@ const LogTableRow: React.FC<{ log: ActivityLog; category?: Category; onEdit?: (l
           </div>
 
           {/* Text */}
-          <div className="flex flex-col min-w-0 text-left pl-3 border-l border-border/50">
+          <div className="flex flex-col min-w-0 text-left pl-3 border-l border-border">
             <div className="flex items-center gap-2">
               <p className="text-sm font-semibold text-foreground truncate">{defaultEventName}</p>
               {isCustomNote && <MessageSquare size={12} className="text-muted-foreground opacity-50 shrink-0" />}
@@ -90,7 +90,7 @@ const LogTableRow: React.FC<{ log: ActivityLog; category?: Category; onEdit?: (l
 
       {isExpanded && isCustomNote && (
         <div className="px-14 md:px-[4.5rem] pb-4 pt-1 animate-in slide-in-from-top-2 duration-200">
-          <div className="text-sm text-muted-foreground bg-muted/40 p-3 rounded-lg border border-border/50 italic whitespace-pre-wrap">
+          <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg border border-border italic whitespace-pre-wrap">
             {log.eventName}
           </div>
         </div>
@@ -140,7 +140,7 @@ export const LogTable: React.FC<LogTableProps> = ({ logs, categories = [], onEdi
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="appearance-none bg-muted/60 border border-border/40 text-xs text-foreground font-medium rounded-md pl-3 pr-8 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer hover:bg-muted transition-colors"
+                className="appearance-none bg-muted border border-border text-xs text-foreground font-medium rounded-md pl-3 pr-8 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer hover:bg-muted transition-colors"
               >
                 <option value="all">Todas</option>
                 {categories.map(cat => (
@@ -157,14 +157,14 @@ export const LogTable: React.FC<LogTableProps> = ({ logs, categories = [], onEdi
             title={sortOrder === 'newest' ? 'Más recientes primero' : 'Más antiguos primero'}
             className={`p-1.5 rounded-md border transition-all text-xs flex items-center justify-center w-8 h-8 ${sortOrder === 'newest'
               ? 'bg-primary/10 border-primary/20 text-primary'
-              : 'bg-muted/60 border-border/40 text-muted-foreground hover:text-foreground'
+              : 'bg-muted border-border text-muted-foreground hover:text-foreground'
               }`}
           >
             <ArrowUpDown size={13} />
           </button>
 
           {/* Count badge */}
-          <span className="text-xs font-semibold text-muted-foreground px-2.5 py-1 bg-muted/60 rounded-full border border-border/40 tabular-nums h-8 flex items-center justify-center">
+          <span className="text-xs font-semibold text-muted-foreground px-2.5 py-1 bg-muted rounded-full border border-border tabular-nums h-8 flex items-center justify-center">
             {processedLogs.length}
           </span>
         </div>
@@ -189,7 +189,7 @@ export const LogTable: React.FC<LogTableProps> = ({ logs, categories = [], onEdi
             <div className="h-32 flex flex-col items-center justify-center text-muted-foreground text-sm">
               <p>Sin actividad registrada</p>
               {selectedCategory !== 'all' && (
-                <p className="text-xs mt-1 text-muted-foreground/60">en esta categoría</p>
+                <p className="text-xs mt-1 text-muted-foreground">en esta categoría</p>
               )}
             </div>
           )}

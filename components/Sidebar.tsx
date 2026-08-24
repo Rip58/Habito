@@ -30,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
       </div>
 
       {/* Navigation — shadcn TabsList style */}
-      <nav className="flex items-center gap-1 bg-muted/60 p-1 rounded-md border border-border/40">
+      <nav className="flex items-center gap-1 bg-muted p-1 rounded-md border border-border">
         {navItems.map((item) => (
           <button
             key={item.id}

@@ -1,21 +1,13 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import version from '@/public/version.json';
 
+// El valor se hornea en el bundle al compilar.
+//
+// Antes se leía del disco con readFileSync(process.cwd()/public/version.json).
+// En serverless el directorio public/ se sube al CDN como estático y no viaja
+// dentro de la función, así que esa lectura fallaba en producción.
 export async function GET() {
-    try {
-        const versionPath = path.join(process.cwd(), 'public', 'version.json');
-
-        if (!fs.existsSync(versionPath)) {
-            return NextResponse.json({ error: 'Version file not found' }, { status: 404 });
-        }
-
-        const versionData = fs.readFileSync(versionPath, 'utf-8');
-        const version = JSON.parse(versionData);
-
-        return NextResponse.json(version);
-    } catch (error) {
-        console.error('Error reading version:', error);
-        return NextResponse.json({ error: 'Failed to read version' }, { status: 500 });
-    }
+    return NextResponse.json(version, {
+        headers: { 'Cache-Control': 'no-store, max-age=0' },
+    });
 }

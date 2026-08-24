@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { SummaryCards } from '../components/SummaryCards';
 import { Heatmap } from '../components/Heatmap';
 import { LogTable } from '../components/LogTable';
-import { Plus, ChevronDown, ChevronUp, Zap } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Zap, X, Check } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { Category, HeatmapDay, ActivityLog } from '../types';
 import { api, Log } from '../lib/api';
@@ -15,6 +15,8 @@ interface OverviewProps {
 
 export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategoriesChange }) => {
     const [logs, setLogs] = useState<ActivityLog[]>([]);
+    const [error, setError] = useState<string | null>(null);
+    const [markingId, setMarkingId] = useState<string | null>(null);
     const [heatmapTimeRange, setHeatmapTimeRange] = useState<'1M' | '3M' | '6M' | '12M'>('12M');
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
     const [selectedAccount, setSelectedAccount] = useState(
@@ -48,9 +50,10 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
             const data = await api.logs.getAll();
             const formattedLogs = data.map(log => ({ ...log, dateObj: new Date(log.dateObj) }));
             setLogs(formattedLogs);
-        } catch (err: any) {
+            setError(null);
+        } catch (err) {
             console.error('Failed to fetch logs:', err);
-            alert('Debug: Failed to fetch logs (GET). ' + (err.message || JSON.stringify(err)));
+            setError('No se pudieron cargar los registros.');
         }
     }, []);
 
@@ -61,16 +64,22 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
 
-    // Generate heatmap data for a single category (each habit gets its own heatmap)
-    const getHeatmapData = (categoryId: string): HeatmapDay[] => {
-        const filteredLogs = logs.filter(log => (log.categoryId === categoryId) || (log.category === categoryId));
-        const daysMap = new Map<string, number>();
-        filteredLogs.forEach(log => {
-            if (log.dateObj) {
-                const dateKey = getLocalDateKey(log.dateObj);
-                daysMap.set(dateKey, (daysMap.get(dateKey) || 0) + 1);
+    // Un solo recorrido de los logs y un solo rango de fechas para TODAS las
+    // categorías, memorizado. Antes esto se recalculaba por categoría en cada
+    // render, dentro del propio JSX.
+    const heatmapByCategory = useMemo(() => {
+        const counts = new Map<string, Map<string, number>>();
+        logs.forEach(log => {
+            if (!log.dateObj) return;
+            const dateKey = getLocalDateKey(log.dateObj);
+            for (const key of [log.categoryId, log.category]) {
+                if (!key) continue;
+                let days = counts.get(key);
+                if (!days) { days = new Map(); counts.set(key, days); }
+                days.set(dateKey, (days.get(dateKey) || 0) + 1);
             }
         });
+
         const currentYear = new Date().getFullYear();
         const today = new Date();
         let start: Date;
@@ -87,18 +96,25 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                 break;
         }
 
-        const days: HeatmapDay[] = [];
+        const dateKeys: string[] = [];
         const loopDate = new Date(start);
         while (loopDate <= end) {
-            const dateStr = `${loopDate.getUTCFullYear()}-${String(loopDate.getUTCMonth() + 1).padStart(2, '0')}-${String(loopDate.getUTCDate()).padStart(2, '0')}`;
-            const count = daysMap.get(dateStr) || 0;
-            let level: 0 | 1 | 2 | 3 | 4 = 0;
-            if (count > 0) level = 4;
-            days.push({ date: dateStr, count, level });
+            dateKeys.push(`${loopDate.getUTCFullYear()}-${String(loopDate.getUTCMonth() + 1).padStart(2, '0')}-${String(loopDate.getUTCDate()).padStart(2, '0')}`);
             loopDate.setUTCDate(loopDate.getUTCDate() + 1);
         }
-        return days;
-    };
+
+        const byCategory = new Map<string, HeatmapDay[]>();
+        categories.forEach(cat => {
+            const days = counts.get(cat.id) ?? counts.get(cat.name) ?? new Map<string, number>();
+            byCategory.set(cat.id, dateKeys.map(date => {
+                const count = days.get(date) || 0;
+                // Cinco pasos reales: el dato ya estaba, antes se aplastaba a 0 ó 4.
+                const level = (count === 0 ? 0 : count >= 4 ? 4 : count) as 0 | 1 | 2 | 3 | 4;
+                return { date, count, level };
+            }));
+        });
+        return byCategory;
+    }, [logs, categories, heatmapTimeRange]);
 
     // Log Modal state
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
@@ -159,14 +175,19 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                 eventName: note || `Sesión de ${categoryName}`,
                 category: categoryName,
                 categoryId: categoryIdToUse,
-                intensity: 50 + (count * 10),
+                intensity: 1,
                 status: 'COMPLETED' as const,
             };
 
             if (editingLogId) {
                 await api.logs.update(editingLogId, logData);
             } else {
-                await api.logs.create(logData);
+                // El contador crea N registros de verdad. Antes solo cifraba el
+                // número en `intensity`, un campo que no lee nadie: el heatmap y
+                // las tarjetas cuentan filas, así que registrar 5 veces contaba 1.
+                await Promise.all(
+                    Array.from({ length: Math.max(1, count) }, () => api.logs.create(logData)),
+                );
             }
 
             setIsLogModalOpen(false);
@@ -175,9 +196,9 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
             setEditingLogId(null);
             setSelectedDate(getTodayStr());
             fetchLogs();
-        } catch (error: any) {
-            console.error('Save failed:', error);
-            alert('Error al guardar: ' + (error.message || 'Error desconocido'));
+        } catch (err) {
+            console.error('Save failed:', err);
+            setError('No se pudo guardar el registro. Inténtalo de nuevo.');
         }
     };
 
@@ -192,6 +213,47 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
     const ratioNumCount = getFilteredLogCount(ratioNum);
     const ratioDenomCount = getFilteredLogCount(ratioDenom);
     const ratioPercent = ratioDenomCount === 0 ? 0 : Math.round((ratioNumCount / ratioDenomCount) * 100);
+
+    // ¿Qué hábitos llevo hechos hoy? Un hábito cuenta como hecho si tiene al
+    // menos un registro con la fecha local de hoy.
+    const todayKey = getTodayStr();
+    const todayRows = useMemo(() => {
+        const doneKeys = new Set<string>();
+        logs.forEach(log => {
+            if (!log.dateObj || getLocalDateKey(log.dateObj) !== todayKey) return;
+            if (log.categoryId) doneKeys.add(log.categoryId);
+            if (log.category) doneKeys.add(log.category);
+        });
+        return enabledCategories.map(cat => ({
+            cat,
+            done: doneKeys.has(cat.id) || doneKeys.has(cat.name),
+        }));
+    }, [logs, enabledCategories, todayKey]);
+
+    const todayDone = todayRows.filter(r => r.done).length;
+    const todayPercent = todayRows.length === 0 ? 0 : Math.round((todayDone / todayRows.length) * 100);
+
+    const handleQuickLog = async (cat: Category) => {
+        setMarkingId(cat.id);
+        try {
+            const now = new Date();
+            await api.logs.create({
+                timestamp: now.toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+                dateObj: now.toISOString(),
+                eventName: `Sesión de ${cat.name}`,
+                category: cat.name,
+                categoryId: cat.id,
+                intensity: 1,
+                status: 'COMPLETED',
+            });
+            await fetchLogs();
+        } catch (err) {
+            console.error('Quick log failed:', err);
+            setError('No se pudo registrar el hábito.');
+        } finally {
+            setMarkingId(null);
+        }
+    };
 
     return (
         <>
@@ -227,7 +289,7 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                         <select
                             value={selectedAccount}
                             onChange={(e) => setSelectedAccount(e.target.value)}
-                            className="h-10 appearance-none bg-muted/60 border border-border/40 hover:border-border text-sm font-medium text-foreground rounded-md pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer transition-colors"
+                            className="h-10 appearance-none bg-muted border border-border text-sm font-medium text-foreground rounded-md pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer transition-colors"
                         >
                             <option value="all">Todas las cuentas</option>
                             {enabledCategories.map(cat => (
@@ -241,7 +303,7 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                     <div className="relative">
                         <button
                             onClick={() => setIsRatioOpen(!isRatioOpen)}
-                            className="h-10 bg-muted/60 border border-border/40 hover:border-border text-sm font-medium text-foreground rounded-md pl-3 pr-3 flex items-center gap-2 transition-colors"
+                            className="h-10 bg-muted border border-border text-sm font-medium text-foreground rounded-md pl-3 pr-3 flex items-center gap-2 transition-colors"
                         >
                             <Zap size={14} className="text-primary" />
                             <span>Ratio</span>
@@ -252,24 +314,24 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                         {isRatioOpen && (
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setIsRatioOpen(false)} />
-                                <div className="absolute right-0 top-full mt-2 w-64 rounded-lg border bg-card border-border/60 shadow-lg p-4 z-50">
+                                <div className="absolute right-0 top-full mt-2 w-64 rounded-lg border bg-card border-border shadow-lg p-4 z-50">
                                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Comparar cuentas</p>
                                     <div className="flex flex-col gap-1.5 mb-3">
                                         <select
                                             value={ratioNum}
                                             onChange={(e) => setRatioNum(e.target.value)}
-                                            className="appearance-none bg-muted/60 border border-border/40 hover:border-border text-xs font-semibold text-foreground rounded-md pl-2.5 pr-6 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer transition-colors"
+                                            className="appearance-none bg-muted border border-border text-xs font-semibold text-foreground rounded-md pl-2.5 pr-6 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer transition-colors"
                                         >
                                             <option value="all">Todas</option>
                                             {enabledCategories.map(cat => (
                                                 <option key={cat.id} value={cat.id}>{cat.name}</option>
                                             ))}
                                         </select>
-                                        <div className="h-px bg-border/40 w-full" />
+                                        <div className="h-px bg-border w-full" />
                                         <select
                                             value={ratioDenom}
                                             onChange={(e) => setRatioDenom(e.target.value)}
-                                            className="appearance-none bg-muted/60 border border-border/40 hover:border-border text-xs font-semibold text-foreground rounded-md pl-2.5 pr-6 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer transition-colors"
+                                            className="appearance-none bg-muted border border-border text-xs font-semibold text-foreground rounded-md pl-2.5 pr-6 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer transition-colors"
                                         >
                                             <option value="all">Todas</option>
                                             {enabledCategories.map(cat => (
@@ -285,6 +347,75 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                     </div>
                 </div>
             </div>
+            {error && (
+                <div role="alert" className="flex items-center gap-2.5 rounded-md border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm font-medium text-destructive">
+                    <span className="flex-1">{error}</span>
+                    <button onClick={() => setError(null)} aria-label="Descartar" className="shrink-0 rounded-md p-1 hover:bg-destructive/10">
+                        <X size={14} />
+                    </button>
+                </div>
+            )}
+
+
+            {/* ── Hoy ──────────────────────────────────────────── */}
+            {todayRows.length > 0 && (
+                <section aria-labelledby="hoy-heading" className="space-y-2.5">
+                    <h2 id="hoy-heading" className="text-base font-semibold text-foreground">Hoy</h2>
+
+                    <div className="rounded-lg border bg-card border-border shadow-sm overflow-hidden">
+                        <div className="p-4 space-y-3">
+                            <div className="flex items-baseline justify-between gap-3">
+                                <div className="flex items-baseline gap-1.5">
+                                    <span className="text-2xl font-semibold text-foreground tabular-nums">{todayDone}</span>
+                                    <span className="text-sm font-medium text-muted-foreground">
+                                        de {todayRows.length} {todayRows.length === 1 ? 'hábito' : 'hábitos'}
+                                    </span>
+                                </div>
+                                <span className="text-xs font-semibold text-muted-foreground tabular-nums">{todayPercent}%</span>
+                            </div>
+                            <div
+                                className="h-1.5 rounded-full bg-muted overflow-hidden"
+                                role="progressbar"
+                                aria-valuenow={todayDone}
+                                aria-valuemin={0}
+                                aria-valuemax={todayRows.length}
+                                aria-label="Hábitos completados hoy"
+                            >
+                                <div
+                                    className="h-full rounded-full bg-primary transition-all duration-300"
+                                    style={{ width: `${todayPercent}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        {todayRows.map(({ cat, done }) => (
+                            <div key={cat.id} className="flex items-center gap-3 min-h-[3.5rem] px-4 py-2 border-t border-border">
+                                <div
+                                    className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 border"
+                                    style={{ backgroundColor: `${cat.color}1f`, borderColor: `${cat.color}3d` }}
+                                >
+                                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                                </div>
+                                <span className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">{cat.name}</span>
+                                {done ? (
+                                    <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground shrink-0">
+                                        <Check size={16} className="text-primary" />
+                                        Hecho
+                                    </span>
+                                ) : (
+                                    <button
+                                        onClick={() => handleQuickLog(cat)}
+                                        disabled={markingId === cat.id}
+                                        className="h-9 px-3.5 rounded-md border border-input text-sm font-semibold text-foreground hover:bg-accent transition-colors active:scale-[0.98] disabled:opacity-50 shrink-0"
+                                    >
+                                        {markingId === cat.id ? 'Guardando…' : 'Marcar'}
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
 
             {/* Summary Cards */}
             <SummaryCards logs={logs} categories={categories} selectedCategory={selectedAccount} />
@@ -303,7 +434,7 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                             {isHeatmapExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </button>
                         {isHeatmapExpanded && (
-                            <div className="flex items-center gap-0.5 bg-muted/60 p-1 rounded-md border border-border/40">
+                            <div className="flex items-center gap-0.5 bg-muted p-1 rounded-md border border-border">
                                 {(['1M', '3M', '6M', '12M'] as const).map((range) => (
                                     <button
                                         key={range}
@@ -322,14 +453,14 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
 
                     {isHeatmapExpanded && (
                         heatmapCategories.length === 0 ? (
-                            <div className="rounded-lg border bg-card/40 border-border/40 p-8 text-center shadow-sm">
+                            <div className="rounded-lg border bg-card border-border p-8 text-center shadow-sm">
                                 <p className="text-sm text-muted-foreground">Crea una categoría para ver su mapa de actividad.</p>
                             </div>
                         ) : (
                             heatmapCategories.map(cat => (
-                                <div key={cat.id} className="rounded-lg border bg-card/40 border-border/40 p-5 shadow-sm">
+                                <div key={cat.id} className="rounded-lg border bg-card border-border p-5 shadow-sm">
                                     <Heatmap
-                                        data={getHeatmapData(cat.id)}
+                                        data={heatmapByCategory.get(cat.id) ?? []}
                                         title={cat.name}
                                         customColor={cat.color}
                                         onDayClick={(date) => setViewingDate(date)}
@@ -343,7 +474,7 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
 
                 {/* Log Table (4/12) */}
                 <div className="lg:col-span-4">
-                    <div className="rounded-lg border bg-card/40 border-border/40 p-5 h-full shadow-sm">
+                    <div className="rounded-lg border bg-card border-border p-5 h-full shadow-sm">
                         <LogTable
                             logs={logs}
                             categories={categories}
@@ -374,7 +505,7 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                             return (
                                 <div
                                     key={log.id}
-                                    className="group flex items-center gap-3 px-4 py-3 rounded-xl bg-card/40 border border-border/40 hover:bg-card/70 transition-all duration-200"
+                                    className="group flex items-center gap-3 px-4 py-3 rounded-xl bg-card border border-border hover:bg-accent transition-all duration-200"
                                 >
                                     <div
                                         className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border"
@@ -394,18 +525,20 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                                             {log.category} · {log.timestamp?.split(',')[1]?.trim()}
                                         </p>
                                     </div>
-                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex gap-1 shrink-0">
                                         <button
                                             onClick={() => handleEditLog(log)}
-                                            className="p-1.5 hover:bg-accent rounded-md text-muted-foreground hover:text-primary transition-colors"
+                                            aria-label={`Editar ${log.eventName}`}
+                                            className="h-10 w-10 flex items-center justify-center hover:bg-accent rounded-md text-muted-foreground hover:text-primary transition-colors"
                                         >
-                                            <Edit2 size={13} />
+                                            <Edit2 size={15} />
                                         </button>
                                         <button
                                             onClick={() => log.id !== undefined && handleDeleteLog(log.id)}
-                                            className="p-1.5 hover:bg-destructive/10 rounded-md text-muted-foreground hover:text-destructive transition-colors"
+                                            aria-label={`Eliminar ${log.eventName}`}
+                                            className="h-10 w-10 flex items-center justify-center hover:bg-destructive/10 rounded-md text-muted-foreground hover:text-destructive transition-colors"
                                         >
-                                            <Trash2 size={13} />
+                                            <Trash2 size={15} />
                                         </button>
                                     </div>
                                 </div>
@@ -462,8 +595,9 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                     </div>
 
                     {/* Activations */}
+                    {!editingLogId && (
                     <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Activaciones</label>
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Veces</label>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setCount(Math.max(1, count - 1))}
@@ -481,11 +615,31 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategorie
                                 +
                             </button>
                         </div>
-                        <p className="text-xs text-muted-foreground">¿Cuántas veces lo completaste hoy?</p>
+                        <p className="text-xs text-muted-foreground">
+                            {count === 1 ? 'Se creará 1 registro.' : `Se crearán ${count} registros.`}
+                        </p>
+                    </div>
+                    )}
+
+                    {/* Nota — el estado ya existía y se guardaba en eventName,
+                        pero el formulario nunca lo pintaba. */}
+                    <div className="space-y-1.5">
+                        <div className="flex items-baseline justify-between">
+                            <label htmlFor="log-nota" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nota</label>
+                            <span className="text-xs text-muted-foreground">Opcional</span>
+                        </div>
+                        <textarea
+                            id="log-nota"
+                            value={note}
+                            onChange={(e) => setNote(e.target.value)}
+                            rows={3}
+                            placeholder="¿Algo que recordar de esta sesión?"
+                            className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-ring/30 focus:border-ring outline-none transition-all resize-none"
+                        />
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2 pt-2 border-t border-border/40">
+                    <div className="flex gap-2 pt-2 border-t border-border">
                         <button
                             onClick={handleAddLog}
                             className="flex-1 h-10 bg-primary text-primary-foreground font-semibold rounded-md text-sm hover:opacity-90 transition-all active:scale-[0.99]"

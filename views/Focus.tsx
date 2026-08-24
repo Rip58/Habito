@@ -69,9 +69,9 @@ export const Focus: React.FC<FocusProps> = ({ categories, onCategoriesChange }) 
                                 const timeStr = h > 0 ? `${h}h ${m} m` : `${m} m`;
 
                                 return (
-                                    <div key={cat.id} className="flex items-center justify-between p-3 rounded-xl bg-background border border-border/50">
+                                    <div key={cat.id} className="flex items-center justify-between p-3 rounded-xl bg-background border border-border">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full flex items-center justify-center border border-border/40" style={{ backgroundColor: `${cat.color} 15` }}>
+                                            <div className="w-8 h-8 rounded-full flex items-center justify-center border border-border" style={{ backgroundColor: `${cat.color}15` }}>
                                                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }}></div>
                                             </div>
                                             <span className="font-medium text-foreground text-sm">{cat.name}</span>
@@ -121,7 +121,7 @@ export const Focus: React.FC<FocusProps> = ({ categories, onCategoriesChange }) 
                                 </div>
                             ) : (
                                 <div className="text-center py-12 flex flex-col items-center justify-center">
-                                    <div className="w-16 h-16 rounded-full bg-border/20 flex items-center justify-center mb-4">
+                                    <div className="w-16 h-16 rounded-full bg-border flex items-center justify-center mb-4">
                                         <Clock size={24} className="text-muted-foreground opacity-50" />
                                     </div>
                                     <p className="text-muted-foreground font-medium text-sm">Sin sesiones {filterCategoryId !== 'all' ? 'para esta actividad' : 'registradas'}</p>

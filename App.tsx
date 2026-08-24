@@ -9,51 +9,67 @@ import { BottomNav } from './components/BottomNav';
 import { Login } from './components/Login';
 import { VersionCheck } from './components/VersionCheck';
 import { Page, Category } from './types';
-import { api } from './lib/api';
+import { api, ApiError } from './lib/api';
+
+type AuthState = 'checking' | 'signedOut' | 'signedIn';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(Page.OVERVIEW);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [pin, setPin] = useState('0001');
-  const [loginError, setLoginError] = useState(false);
+  const [authState, setAuthState] = useState<AuthState>('checking');
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
 
-  // Fetch categories from API
+  // La sesión vive en una cookie httpOnly, así que se la preguntamos al servidor.
+  useEffect(() => {
+    api.auth.status()
+      .then(({ authenticated }) => setAuthState(authenticated ? 'signedIn' : 'signedOut'))
+      .catch(() => setAuthState('signedOut'));
+  }, []);
+
+  // Siembra las categorías por defecto solo si la cuenta está vacía, en vez de
+  // llamar a /seed en cada carga.
   const fetchCategories = useCallback(async () => {
     try {
-      const cats = await api.categories.getAll();
-      setCategories(cats.map(c => ({ ...c, id: String(c.id) })) as Category[]);
+      let cats = await api.categories.getAll();
+      if (cats.length === 0) {
+        await api.seed();
+        cats = await api.categories.getAll();
+      }
+      setCategories(cats.map(c => ({ ...c, id: String(c.id) })));
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setAuthState('signedOut');
+        return;
+      }
       console.error('Failed to fetch categories:', err);
     }
   }, []);
 
-  // Seed data and fetch categories on initial load
   useEffect(() => {
-    api.seed().then(() => fetchCategories()).catch(console.error);
-  }, [fetchCategories]);
+    if (authState === 'signedIn') fetchCategories();
+  }, [authState, fetchCategories]);
 
-  // Check for saved PIN in localStorage on mount
-  useEffect(() => {
-    const savedPin = localStorage.getItem('app_pin');
-    if (savedPin) {
-      setPin(savedPin);
-    }
-  }, []);
-
-  const handleLogin = (enteredPin: string) => {
-    if (enteredPin === pin) {
-      setIsAuthenticated(true);
-      setLoginError(false);
-    } else {
-      setLoginError(true);
-      setTimeout(() => setLoginError(false), 2000);
+  const handleLogin = async (enteredPin: string) => {
+    setIsSubmitting(true);
+    setLoginError(null);
+    try {
+      await api.auth.login(enteredPin);
+      setAuthState('signedIn');
+    } catch (err) {
+      setLoginError(err instanceof ApiError ? err.message : 'No se pudo conectar con el servidor.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleUpdatePin = (newPin: string) => {
-    setPin(newPin);
-    localStorage.setItem('app_pin', newPin);
+  const handleLogout = async () => {
+    try {
+      await api.auth.logout();
+    } finally {
+      setCategories([]);
+      setAuthState('signedOut');
+    }
   };
 
   const renderPage = () => {
@@ -66,10 +82,8 @@ const App: React.FC = () => {
         return (
           <Settings
             categories={categories}
-            setCategories={() => { }}
             onCategoriesChange={fetchCategories}
-            currentPin={pin}
-            onUpdatePin={handleUpdatePin}
+            onLogout={handleLogout}
           />
         );
       default:
@@ -84,8 +98,16 @@ const App: React.FC = () => {
     }
   };
 
-  if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} error={loginError} />;
+  if (authState === 'checking') {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background text-muted-foreground text-sm">
+        Cargando…
+      </div>
+    );
+  }
+
+  if (authState === 'signedOut') {
+    return <Login onLogin={handleLogin} error={loginError} isSubmitting={isSubmitting} />;
   }
 
   return (

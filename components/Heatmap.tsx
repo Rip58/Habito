@@ -97,7 +97,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
       if (rgb) {
         const { r, g, b } = rgb;
         // Opacidades más marcadas para que se vean bien
-        const alphas = [0.05, 0.4, 0.65, 0.85, 1];
+        const alphas = [0.05, 0.3, 0.5, 0.75, 1];
         const alpha = alphas[level] || 1;
         if (level === 0) return { className: 'bg-foreground/5 dark:bg-foreground/10', style: {} };
         return { className: '', style: { backgroundColor: `rgba(${r}, ${g}, ${b}, ${alpha})` } };
@@ -130,7 +130,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                 <select
                   value={selectedCategory}
                   onChange={(e) => onCategoryChange(e.target.value)}
-                  className="appearance-none bg-muted/60 border border-border/40 text-xs text-muted-foreground font-medium rounded-md pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer hover:bg-muted transition-colors"
+                  className="appearance-none bg-muted border border-border text-xs text-muted-foreground font-medium rounded-md pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer hover:bg-muted transition-colors"
                 >
                   <option value="all">Todas</option>
                   {categories.map(cat => (
@@ -143,7 +143,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
 
             {/* Time Range — shadcn Tabs style */}
             {onTimeRangeChange && (
-              <div className="flex items-center gap-0.5 bg-muted/60 p-1 rounded-md border border-border/40">
+              <div className="flex items-center gap-0.5 bg-muted p-1 rounded-md border border-border">
                 {(['1M', '3M', '6M', '12M'] as const).map((range) => (
                   <button
                     key={range}
@@ -163,15 +163,15 @@ export const Heatmap: React.FC<HeatmapProps> = ({
 
         {/* Intensity Legend */}
         <div className="flex justify-end w-full">
-          <div className="flex items-center gap-2 group cursor-help" title="Sin eventos vs 1 o más eventos">
+          <div className="flex items-center gap-2 group cursor-help" title="De 0 a 4 o más registros en el día">
             <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">Menos</span>
             <div className="flex gap-1">
-              {[0, 4].map((level) => {
+              {[0, 1, 2, 3, 4].map((level) => {
                 const { className, style } = getStyle(level);
                 return (
                   <div
                     key={level}
-                    className={`w-3 h-3 rounded-sm ${className} border border-border/20 shadow-sm`}
+                    className={`w-3 h-3 rounded-sm ${className} border border-border shadow-sm`}
                     style={style}
                   />
                 );
@@ -214,7 +214,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
                         ${day ? 'cursor-pointer hover:scale-[1.3] hover:z-20 hover:ring-1 hover:ring-border/50 hover:shadow-md' : ''}
                       `}
                       style={style}
-                      title={day ? `${day.date}: ${day.count} eventos (Nivel ${day.level})` : undefined}
+                      title={day ? `${day.date}: ${day.count} ${day.count === 1 ? 'registro' : 'registros'}` : undefined}
                     >
                       {day && (
                         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-white/20 rounded-[2px] transition-opacity pointer-events-none" />

@@ -1,31 +1,30 @@
 import React, { useState } from 'react';
 import { Category } from '../types';
-import { Edit2, Trash2, Plus, X, Lock, Save, CheckCircle, Layers, Cloud, RefreshCw, ChevronRight, Moon, Sun, Monitor } from 'lucide-react';
+import { Edit2, Trash2, Plus, X, Lock, Save, CheckCircle, Layers, Cloud, RefreshCw, Moon, Sun, Monitor, LogOut, AlertCircle } from 'lucide-react';
 import { Modal } from '../components/Modal';
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import { useVersion } from '../components/VersionCheck';
 import { useTheme } from '../components/ThemeProvider';
 
 interface SettingsProps {
     categories?: Category[];
-    setCategories?: (cats: Category[]) => void;
     onCategoriesChange?: () => void;
-    currentPin?: string;
-    onUpdatePin?: (pin: string) => void;
+    onLogout?: () => void;
 }
 
 export const Settings: React.FC<SettingsProps> = ({
     categories = [],
-    setCategories = () => { },
     onCategoriesChange = () => { },
-    currentPin = '0001',
-    onUpdatePin = () => { }
+    onLogout = () => { }
 }) => {
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-    const [newPin, setNewPin] = useState(currentPin);
+    const [currentPin, setCurrentPin] = useState('');
+    const [newPin, setNewPin] = useState('');
     const [isEditingPin, setIsEditingPin] = useState(false);
     const [pinSuccess, setPinSuccess] = useState(false);
-    const { currentVersion, checkForUpdates, isChecking } = useVersion();
+    const [pinError, setPinError] = useState<string | null>(null);
+    const [isSavingPin, setIsSavingPin] = useState(false);
+    const { currentVersion, checkForUpdates, isChecking, updateAvailable, lastCheckedAt } = useVersion();
     const { theme, setTheme } = useTheme();
 
     const handleDelete = async (id: string) => {
@@ -56,12 +55,29 @@ export const Settings: React.FC<SettingsProps> = ({
         });
     };
 
-    const handleSavePin = () => {
-        if (newPin && newPin.length === 4) {
-            onUpdatePin(newPin);
-            setIsEditingPin(false);
+    const closePinEditor = () => {
+        setIsEditingPin(false);
+        setCurrentPin('');
+        setNewPin('');
+        setPinError(null);
+    };
+
+    const handleSavePin = async () => {
+        setPinError(null);
+        if (!/^\d{4}$/.test(newPin)) {
+            setPinError('El PIN nuevo debe tener 4 dígitos.');
+            return;
+        }
+        setIsSavingPin(true);
+        try {
+            await api.auth.changePin(currentPin, newPin);
+            closePinEditor();
             setPinSuccess(true);
             setTimeout(() => setPinSuccess(false), 3000);
+        } catch (err) {
+            setPinError(err instanceof ApiError ? err.message : 'No se pudo cambiar el PIN.');
+        } finally {
+            setIsSavingPin(false);
         }
     };
 
@@ -76,6 +92,93 @@ export const Settings: React.FC<SettingsProps> = ({
                 <p className="text-sm text-muted-foreground mt-0.5">Gestiona tus preferencias del sistema.</p>
             </div>
 
+            {/* ── Categories ───────────────────────────────────── */}
+            <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                            <Layers size={14} />
+                        </div>
+                        <h2 className="text-base font-semibold text-foreground">Hábitos</h2>
+                    </div>
+                    <button
+                        onClick={handleNewCategory}
+                        className="h-9 px-3 bg-primary text-primary-foreground font-semibold rounded-md flex items-center gap-1.5 text-sm transition-all hover:opacity-90 active:scale-[0.99]"
+                    >
+                        <Plus size={15} />
+                        Nueva
+                    </button>
+                </div>
+
+                <div className="space-y-1.5">
+                    {categories.map((cat) => (
+                        <div
+                            key={cat.id}
+                            className="group flex items-center gap-3 px-4 py-3 rounded-xl bg-card border border-border hover:bg-accent transition-all duration-200"
+                        >
+                            {/* Color icon */}
+                            <div
+                                className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border transition-colors"
+                                style={{
+                                    backgroundColor: `${cat.color}15`,
+                                    borderColor: `${cat.color}25`,
+                                }}
+                            >
+                                <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-foreground">{cat.name}</p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-xs text-muted-foreground">Meta: {cat.target}</span>
+                                    {!cat.enabled && (
+                                        <span className="px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-semibold border border-border">
+                                            Inactivo
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Color preview dots (hidden on small screens) */}
+                            <div className="hidden lg:flex gap-1 opacity-40">
+                                {[0.15, 0.35, 0.55, 0.75, 1].map((op, i) => (
+                                    <div
+                                        key={i}
+                                        className="w-2.5 h-2.5 rounded-sm"
+                                        style={{ backgroundColor: cat.color, opacity: op }}
+                                    />
+                                ))}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                    onClick={() => setEditingCategory(cat)}
+                                    aria-label={`Editar ${cat.name}`}
+                                    className="h-10 w-10 flex items-center justify-center hover:bg-accent rounded-md text-muted-foreground hover:text-primary transition-colors"
+                                >
+                                    <Edit2 size={16} />
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(cat.id)}
+                                    aria-label={`Eliminar ${cat.name}`}
+                                    className="h-10 w-10 flex items-center justify-center hover:bg-destructive/10 rounded-md text-muted-foreground hover:text-destructive transition-colors"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+
+                    {categories.length === 0 && (
+                        <div className="py-8 text-center text-sm text-muted-foreground">
+                            No hay categorías configuradas.
+                        </div>
+                    )}
+                </div>
+            </section>
+
             {/* ── Apariencia ───────────────────────────────────── */}
             <section className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -85,13 +188,13 @@ export const Settings: React.FC<SettingsProps> = ({
                     <h2 className="text-base font-semibold text-foreground">Apariencia</h2>
                 </div>
 
-                <div className="rounded-lg border bg-card/40 border-border/40 p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="rounded-lg border bg-card border-border p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <p className="text-sm font-semibold text-foreground">Tema Visual</p>
                         <p className="text-xs text-muted-foreground mt-0.5">Define cómo se ve la interfaz de usuario.</p>
                     </div>
 
-                    <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-md border border-border/40 w-fit">
+                    <div className="flex items-center gap-1 bg-muted p-1 rounded-md border border-border w-fit">
                         <button
                             onClick={() => setTheme('light')}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm font-medium transition-all duration-200 ${theme === 'light'
@@ -122,53 +225,104 @@ export const Settings: React.FC<SettingsProps> = ({
                     <div className="h-7 w-7 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                         <Lock size={14} />
                     </div>
-                    <h2 className="text-base font-semibold text-foreground">Seguridad</h2>
+                    <h2 className="text-base font-semibold text-foreground">Bloqueo</h2>
                 </div>
 
-                <div className="rounded-lg border bg-card/40 border-border/40 px-4 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
-                    <div>
-                        <p className="text-sm font-semibold text-foreground">PIN de Acceso</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">Código de 4 dígitos para acceder a la aplicación.</p>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        {isEditingPin ? (
-                            <div className="flex items-center gap-2 slide-in">
-                                <input
-                                    type="text"
-                                    maxLength={4}
-                                    value={newPin}
-                                    onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, ''))}
-                                    className="h-10 w-28 bg-background border border-input rounded-md px-3 text-center font-mono text-foreground focus:ring-2 focus:ring-ring/30 focus:border-ring outline-none"
-                                    placeholder="0000"
-                                    autoFocus
-                                />
-                                <button
-                                    onClick={handleSavePin}
-                                    className="h-9 w-9 bg-primary/10 text-primary hover:bg-primary/20 rounded-md flex items-center justify-center transition-colors"
-                                    title="Guardar"
-                                >
-                                    <Save size={16} />
-                                </button>
-                                <button
-                                    onClick={() => { setIsEditingPin(false); setNewPin(currentPin); }}
-                                    className="h-9 w-9 hover:bg-accent text-muted-foreground rounded-md flex items-center justify-center transition-colors"
-                                    title="Cancelar"
-                                >
-                                    <X size={16} />
-                                </button>
-                            </div>
-                        ) : (
+                <div className="rounded-lg border bg-card border-border px-4 py-4 space-y-4 shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <p className="text-sm font-semibold text-foreground">PIN de acceso</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Código de 4 dígitos para abrir la aplicación.</p>
+                        </div>
+                        {!isEditingPin && (
                             <div className="flex items-center gap-3">
                                 <span className="font-mono text-xl text-muted-foreground tracking-widest">••••</span>
                                 <button
-                                    onClick={() => { setIsEditingPin(true); setNewPin(currentPin); }}
-                                    className="h-9 px-4 bg-muted/60 hover:bg-muted border border-border/40 text-foreground rounded-md text-sm font-medium transition-colors"
+                                    onClick={() => setIsEditingPin(true)}
+                                    className="h-9 px-4 bg-muted hover:bg-muted border border-border text-foreground rounded-md text-sm font-medium transition-colors"
                                 >
                                     Cambiar PIN
                                 </button>
                             </div>
                         )}
+                    </div>
+
+                    {isEditingPin && (
+                        <div className="space-y-3 slide-in">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <label htmlFor="pin-actual" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">PIN actual</label>
+                                    <input
+                                        id="pin-actual"
+                                        type="password"
+                                        inputMode="numeric"
+                                        autoComplete="current-password"
+                                        maxLength={4}
+                                        value={currentPin}
+                                        onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ''))}
+                                        className="h-10 w-full bg-background border border-input rounded-md px-3 text-center font-mono tracking-[0.3em] text-foreground focus:ring-2 focus:ring-ring/30 focus:border-ring outline-none"
+                                        placeholder="••••"
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label htmlFor="pin-nuevo" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">PIN nuevo</label>
+                                    <input
+                                        id="pin-nuevo"
+                                        type="password"
+                                        inputMode="numeric"
+                                        autoComplete="new-password"
+                                        maxLength={4}
+                                        value={newPin}
+                                        onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+                                        className="h-10 w-full bg-background border border-input rounded-md px-3 text-center font-mono tracking-[0.3em] text-foreground focus:ring-2 focus:ring-ring/30 focus:border-ring outline-none"
+                                        placeholder="••••"
+                                    />
+                                </div>
+                            </div>
+
+                            {pinError && (
+                                <div role="alert" className="flex items-center gap-2 text-sm bg-destructive/10 border border-destructive/20 text-destructive p-3 rounded-lg">
+                                    <AlertCircle size={15} className="shrink-0" />
+                                    <span>{pinError}</span>
+                                </div>
+                            )}
+
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleSavePin}
+                                    disabled={isSavingPin}
+                                    className="h-9 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold flex items-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+                                >
+                                    <Save size={15} />
+                                    {isSavingPin ? 'Guardando…' : 'Guardar'}
+                                </button>
+                                <button
+                                    onClick={closePinEditor}
+                                    className="h-9 px-4 border border-border rounded-md text-sm font-medium text-foreground hover:bg-accent transition-colors flex items-center gap-2"
+                                >
+                                    <X size={15} />
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex gap-2.5 p-3 rounded-lg bg-muted border border-border">
+                        <AlertCircle size={15} className="text-muted-foreground shrink-0 mt-0.5" />
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                            El PIN protege el acceso a tus datos en el servidor. No los cifra: quien tenga acceso a la base de datos puede leerlos.
+                        </p>
+                    </div>
+
+                    <div className="pt-3 border-t border-border">
+                        <button
+                            onClick={onLogout}
+                            className="h-9 px-4 border border-border rounded-md text-sm font-medium text-foreground hover:bg-accent transition-colors flex items-center gap-2"
+                        >
+                            <LogOut size={15} />
+                            Cerrar sesión
+                        </button>
                     </div>
                 </div>
 
@@ -183,134 +337,54 @@ export const Settings: React.FC<SettingsProps> = ({
             {/* ── Deploy Info ──────────────────────────────────── */}
             <section className="space-y-3">
                 <div className="flex items-center gap-2">
-                    <div className="h-7 w-7 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                    <div className="h-7 w-7 rounded-xl bg-muted text-muted-foreground flex items-center justify-center">
                         <Cloud size={14} />
                     </div>
-                    <h2 className="text-base font-semibold text-foreground">Información de Deploy</h2>
+                    <h2 className="text-base font-medium text-muted-foreground">Información de deploy</h2>
                 </div>
 
-                <div className="rounded-lg border bg-card/40 border-border/40 p-4 space-y-4 shadow-sm">
-                    {currentVersion ? (
-                        <>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Fecha de Deploy</p>
-                                    <p className="text-sm font-medium text-foreground">
-                                        {new Date(currentVersion.buildDate).toLocaleDateString('es-ES', {
-                                            year: 'numeric', month: 'long', day: 'numeric',
-                                            hour: '2-digit', minute: '2-digit'
-                                        })}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Número de Deploy</p>
-                                    <p className="text-sm font-medium text-foreground">#{currentVersion.deployNumber}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Versión</p>
-                                    <p className="text-sm font-mono text-foreground">{currentVersion.buildHash}</p>
-                                </div>
-                            </div>
-                            <div className="pt-3 border-t border-border/40">
-                                <button
-                                    onClick={checkForUpdates}
-                                    disabled={isChecking}
-                                    className="h-9 px-4 bg-muted/60 hover:bg-muted border border-border/40 text-foreground rounded-md text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <RefreshCw size={14} className={isChecking ? 'animate-spin' : ''} />
-                                    {isChecking ? 'Verificando...' : 'Verificar Actualizaciones'}
-                                </button>
-                            </div>
-                        </>
-                    ) : (
-                        <p className="text-sm text-muted-foreground text-center py-3">Cargando información de versión...</p>
-                    )}
-                </div>
-            </section>
-
-            {/* ── Categories ───────────────────────────────────── */}
-            <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="h-7 w-7 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                            <Layers size={14} />
+                <div className="rounded-lg border bg-card border-border p-4 space-y-4 shadow-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Fecha</p>
+                            <p className="text-sm font-medium text-foreground">
+                                {new Date(currentVersion.buildDate).toLocaleDateString('es-ES', {
+                                    year: 'numeric', month: 'long', day: 'numeric',
+                                    hour: '2-digit', minute: '2-digit'
+                                })}
+                            </p>
                         </div>
-                        <h2 className="text-base font-semibold text-foreground">Categorías de Actividad</h2>
+                        <div>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Build</p>
+                            <p className="text-sm font-mono text-foreground">{currentVersion.buildId}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Commit</p>
+                            <p className="text-sm font-mono text-foreground">
+                                {currentVersion.commit || <span className="font-sans text-muted-foreground">Build local</span>}
+                            </p>
+                        </div>
                     </div>
-                    <button
-                        onClick={handleNewCategory}
-                        className="h-9 px-3 bg-primary text-primary-foreground font-semibold rounded-md flex items-center gap-1.5 text-sm transition-all hover:opacity-90 active:scale-[0.99]"
-                    >
-                        <Plus size={15} />
-                        Nueva
-                    </button>
-                </div>
 
-                <div className="space-y-1.5">
-                    {categories.map((cat) => (
-                        <div
-                            key={cat.id}
-                            className="group flex items-center gap-3 px-4 py-3 rounded-xl bg-card/40 border border-border/40 hover:bg-card/70 transition-all duration-200"
+                    <div className="pt-3 border-t border-border flex flex-wrap items-center gap-3">
+                        <button
+                            onClick={checkForUpdates}
+                            disabled={isChecking}
+                            className="h-9 px-4 bg-muted hover:bg-accent border border-border text-foreground rounded-md text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {/* Color icon */}
-                            <div
-                                className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border transition-colors"
-                                style={{
-                                    backgroundColor: `${cat.color}15`,
-                                    borderColor: `${cat.color}25`,
-                                }}
-                            >
-                                <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                            </div>
+                            <RefreshCw size={14} className={isChecking ? 'animate-spin' : ''} />
+                            {isChecking ? 'Comprobando…' : 'Buscar actualizaciones'}
+                        </button>
 
-                            {/* Info */}
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-foreground">{cat.name}</p>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                    <span className="text-xs text-muted-foreground">Meta: {cat.target}</span>
-                                    {!cat.enabled && (
-                                        <span className="px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-semibold border border-border/40">
-                                            Inactivo
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Color preview dots (hidden on small screens) */}
-                            <div className="hidden lg:flex gap-1 opacity-40">
-                                {[0.15, 0.35, 0.55, 0.75, 1].map((op, i) => (
-                                    <div
-                                        key={i}
-                                        className="w-2.5 h-2.5 rounded-sm"
-                                        style={{ backgroundColor: cat.color, opacity: op }}
-                                    />
-                                ))}
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex items-center gap-1 shrink-0">
-                                <button
-                                    onClick={() => setEditingCategory(cat)}
-                                    className="p-1.5 hover:bg-accent rounded-md text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
-                                >
-                                    <Edit2 size={14} />
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(cat.id)}
-                                    className="p-1.5 hover:bg-destructive/10 rounded-md text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                                <ChevronRight size={14} className="text-muted-foreground/30 ml-1" />
-                            </div>
-                        </div>
-                    ))}
-
-                    {categories.length === 0 && (
-                        <div className="py-8 text-center text-sm text-muted-foreground">
-                            No hay categorías configuradas.
-                        </div>
-                    )}
+                        {updateAvailable ? (
+                            <span className="text-sm font-medium text-primary">Hay una versión nueva disponible.</span>
+                        ) : lastCheckedAt ? (
+                            <span className="text-sm text-muted-foreground">
+                                Estás en la última versión · comprobado a las{' '}
+                                {lastCheckedAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        ) : null}
+                    </div>
                 </div>
             </section>
 
@@ -383,7 +457,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         </div>
 
                         {/* Enabled toggle */}
-                        <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/40">
+                        <div className="flex items-center justify-between p-3 rounded-xl bg-muted border border-border">
                             <div>
                                 <p className="text-sm font-medium text-foreground">Categoría activa</p>
                                 <p className="text-xs text-muted-foreground">Aparece en los filtros y formularios</p>
@@ -399,7 +473,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         </div>
 
                         {/* Actions */}
-                        <div className="flex gap-2 pt-1 border-t border-border/40">
+                        <div className="flex gap-2 pt-1 border-t border-border">
                             <button
                                 onClick={handleSaveCategory}
                                 className="flex-1 h-10 bg-primary text-primary-foreground font-semibold rounded-md text-sm hover:opacity-90 transition-all active:scale-[0.99]"

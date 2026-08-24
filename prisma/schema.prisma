@@ -58,3 +58,11 @@ model TimerSession {
   @@index([startedAt])
   @@map("timer_sessions")
 }
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}

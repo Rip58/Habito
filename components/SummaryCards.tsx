@@ -59,7 +59,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, selectedCatego
   }, [logs, selectedCategory]);
 
   return (
-    <div className="rounded-lg border bg-card/40 border-border/40 shadow-sm hover:bg-card/70 transition-all duration-200 fade-in grid grid-cols-2 divide-x divide-border/40">
+    <div className="rounded-lg border bg-card border-border shadow-sm hover:bg-accent transition-all duration-200 fade-in grid grid-cols-2 divide-x divide-border">
       <div className="p-4">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary border border-primary/10 shrink-0 mb-4">
           <Zap size={20} />
