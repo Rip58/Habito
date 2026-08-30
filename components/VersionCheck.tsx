@@ -1,6 +1,7 @@
+"use client";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { RefreshCw, X } from 'lucide-react';
 import buildInfo from '../public/version.json';
+import { Cmd } from './v6/Button';
 
 export interface VersionInfo {
     buildId: string;
@@ -8,12 +9,8 @@ export interface VersionInfo {
     buildDate: string;
 }
 
-// Horneado en el bundle al compilar: es la versión que ESTA pestaña está
-// ejecutando, no la que el servidor sirve ahora mismo.
-//
-// Esa distinción es todo el mecanismo. Antes se comparaba /version.json contra
-// /api/v1/version, pero ambos leen el mismo archivo del mismo despliegue: dos
-// lecturas del mismo sitio nunca difieren, así que jamás detectaba nada.
+// Horneado en el bundle al compilar: la versión que ESTA pestaña ejecuta, no la
+// que el servidor sirve ahora mismo. Esa diferencia es todo el mecanismo.
 const RUNNING: VersionInfo = buildInfo;
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000;
@@ -48,11 +45,8 @@ export const VersionCheck: React.FC<{ children: React.ReactNode }> = ({ children
         inFlight.current = true;
         setIsChecking(true);
         try {
-            // no-store: si el navegador sirve la respuesta de su caché, la
-            // comprobación mira una versión vieja del servidor.
             const response = await fetch('/api/v1/version', { cache: 'no-store' });
             if (!response.ok) return;
-
             const served: VersionInfo = await response.json();
             if (served.buildId && served.buildId !== RUNNING.buildId) {
                 setUpdateAvailable(true);
@@ -67,8 +61,6 @@ export const VersionCheck: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, []);
 
-    // Al montar, cada cinco minutos, y al volver a la pestaña. Antes solo
-    // comprobaba al montar, así que una pestaña abierta no se enteraba nunca.
     useEffect(() => {
         checkForUpdates();
         const timer = setInterval(checkForUpdates, CHECK_INTERVAL_MS);
@@ -88,32 +80,19 @@ export const VersionCheck: React.FC<{ children: React.ReactNode }> = ({ children
         >
             {children}
 
-            {/* Recargar lo decide la persona. Antes se forzaba a los 3 segundos,
-                lo que se lleva por delante un formulario a medias. */}
             {updateAvailable && !dismissed && (
                 <div
                     role="status"
-                    className="fixed top-4 left-1/2 -translate-x-1/2 z-[70] w-[min(26rem,calc(100vw-2rem))] fade-in"
+                    className="fixed left-1/2 top-3 z-[70] w-[min(26rem,calc(100vw-1.75rem))] -translate-x-1/2 rounded border border-border bg-surface px-3 py-2.5"
+                    style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}
                 >
-                    <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-lg">
-                        <RefreshCw size={18} className="text-primary shrink-0" />
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-foreground">Hay una versión nueva</p>
-                            <p className="text-xs text-muted-foreground">Recarga cuando te venga bien.</p>
-                        </div>
-                        <button
-                            onClick={() => window.location.reload()}
-                            className="h-9 px-3.5 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity shrink-0"
-                        >
-                            Actualizar
-                        </button>
-                        <button
-                            onClick={() => setDismissed(true)}
-                            aria-label="Descartar"
-                            className="h-9 w-9 rounded-md flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors shrink-0"
-                        >
-                            <X size={16} />
-                        </button>
+                    <div className="text-12">
+                        <span className="text-green">$</span>{' '}
+                        <span className="font-bold text-white">versión nueva disponible</span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-4">
+                        <Cmd strong onClick={() => window.location.reload()}>actualizar</Cmd>
+                        <Cmd accent="var(--v6-dim)" onClick={() => setDismissed(true)}>ahora no</Cmd>
                     </div>
                 </div>
             )}

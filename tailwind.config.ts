@@ -1,10 +1,7 @@
 import type { Config } from 'tailwindcss';
-import animate from 'tailwindcss-animate';
 
-// Antes vivía inline en app/layout.tsx y se inyectaba al CDN de Tailwind.
-// Ahora es la configuración real del build.
+// V6 — sistema "terminal". Paleta y escala tomadas literalmente de la guía.
 const config: Config = {
-    darkMode: 'class',
     content: [
         './app/**/*.{ts,tsx}',
         './components/**/*.{ts,tsx}',
@@ -14,85 +11,53 @@ const config: Config = {
     theme: {
         extend: {
             colors: {
-                border: 'hsl(var(--border) / <alpha-value>)',
-                input: 'hsl(var(--input) / <alpha-value>)',
-                ring: 'hsl(var(--ring) / <alpha-value>)',
-                background: 'hsl(var(--background) / <alpha-value>)',
-                foreground: 'hsl(var(--foreground) / <alpha-value>)',
-                primary: {
-                    DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
-                    foreground: 'hsl(var(--primary-foreground) / <alpha-value>)',
-                },
-                secondary: {
-                    DEFAULT: 'hsl(var(--secondary) / <alpha-value>)',
-                    foreground: 'hsl(var(--secondary-foreground) / <alpha-value>)',
-                },
-                destructive: {
-                    DEFAULT: 'hsl(var(--destructive) / <alpha-value>)',
-                    foreground: 'hsl(var(--destructive-foreground) / <alpha-value>)',
-                },
-                muted: {
-                    DEFAULT: 'hsl(var(--muted) / <alpha-value>)',
-                    foreground: 'hsl(var(--muted-foreground) / <alpha-value>)',
-                },
-                accent: {
-                    DEFAULT: 'hsl(var(--accent) / <alpha-value>)',
-                    foreground: 'hsl(var(--accent-foreground) / <alpha-value>)',
-                },
-                popover: {
-                    DEFAULT: 'hsl(var(--popover) / <alpha-value>)',
-                    foreground: 'hsl(var(--popover-foreground) / <alpha-value>)',
-                },
-                card: {
-                    DEFAULT: 'hsl(var(--card) / <alpha-value>)',
-                    foreground: 'hsl(var(--card-foreground) / <alpha-value>)',
-                },
+                background: 'var(--v6-bg)',
+                surface: 'var(--v6-surface)',
+                border: 'var(--v6-line)',
+                foreground: 'var(--v6-fg)',
+                white: 'var(--v6-white)',
+                muted: 'var(--v6-dim2)',
+                subtle: 'var(--v6-dim)',
+
+                green: 'var(--v6-green)',
+                amber: 'var(--v6-amber)',
+                orange: 'var(--v6-orange)',
+                red: 'var(--v6-red)',
+                violet: 'var(--v6-violet)',
+                blue: 'var(--v6-blue)',
             },
             fontFamily: {
-                sans: ['Inter', 'system-ui', 'sans-serif'],
-                mono: ['JetBrains Mono', 'monospace'],
+                // Una sola familia para toda la hoja. `sans` apunta aquí también
+                // para que una clase suelta no rompa la estética.
+                sans: ['var(--font-mono-v6)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+                mono: ['var(--font-mono-v6)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
             },
+            // Cuadrado, no redondo. Todos los radios grandes caen a 2px para que
+            // una clase heredada no deje una tarjeta redondeada al lado de un
+            // botón cuadrado (§9).
             borderRadius: {
-                lg: '0.5rem',
-                md: '0.375rem',
-                sm: '0.25rem',
-                xl: '0.75rem',
-                '2xl': '1rem',
-                '3xl': '1.5rem',
+                none: '0',
+                sm: '1px',
+                DEFAULT: '2px',
+                md: '2px',
+                lg: '2px',
+                xl: '2px',
+                '2xl': '2px',
+                '3xl': '2px',
+                full: '9999px',
             },
-            animation: {
-                'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                'fade-in': 'fade-in-up 0.4s ease-out both',
-                'slide-in': 'slide-in-right 0.3s ease-out both',
-                'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
-                'modal-in': 'zoom-in-95 0.2s ease-out both',
-            },
-            keyframes: {
-                'fade-in-up': {
-                    from: { opacity: '0', transform: 'translateY(10px)' },
-                    to: { opacity: '1', transform: 'translateY(0)' },
-                },
-                'slide-in-right': {
-                    from: { opacity: '0', transform: 'translateX(-10px)' },
-                    to: { opacity: '1', transform: 'translateX(0)' },
-                },
-                'pulse-glow': {
-                    '0%, 100%': { opacity: '1' },
-                    '50%': { opacity: '0.7' },
-                },
-                'zoom-in-95': {
-                    from: { opacity: '0', transform: 'scale(0.95)' },
-                    to: { opacity: '1', transform: 'scale(1)' },
-                },
-            },
-            boxShadow: {
-                sm: '0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10)',
-                md: '0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10)',
+            fontSize: {
+                '9': ['9px', '1.4'],
+                '10': ['10px', '1.4'],
+                '11': ['11px', '1.5'],
+                '12': ['12px', '1.5'],
+                '13': ['13px', '1.5'],
+                '14': ['14px', '1.4'],
+                display: ['44px', '1'],
             },
         },
     },
-    // El marcado ya usa animate-in / slide-in-from-top-*, que vienen de este plugin.
-    plugins: [animate],
+    plugins: [],
 };
 
 export default config;

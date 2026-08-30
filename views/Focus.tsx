@@ -1,139 +1,152 @@
-import React, { useState, useEffect } from 'react';
+"use client";
+import React, { useCallback, useEffect, useState } from 'react';
 import { Category, TimerSession } from '../types';
+import { api } from '../lib/api';
 import { FocusTimer } from '../components/FocusTimer';
 import { TimerSessionCard } from '../components/TimerSessionCard';
-import { api } from '../lib/api';
-import { Clock } from 'lucide-react';
+import { Modal } from '../components/Modal';
+import { Sec } from '../components/v6/Sec';
+import { Box } from '../components/v6/Button';
+import { toPaletteHex } from '../components/v6/nav';
 
 interface FocusProps {
     categories: Category[];
     onCategoriesChange?: () => void;
 }
 
+const parseTargetSeconds = (target?: string): number | null => {
+    if (!target) return null;
+    const t = target.toLowerCase();
+    const hours = t.match(/(\d+(?:[.,]\d+)?)\s*(?:h\b|horas?)/);
+    const minutes = t.match(/(\d+(?:[.,]\d+)?)\s*(?:m\b|min|minutos?)/);
+    if (!hours && !minutes) return null;
+    const num = (m: RegExpMatchArray | null) => (m ? parseFloat(m[1].replace(',', '.')) : 0);
+    const seconds = num(hours) * 3600 + num(minutes) * 60;
+    return seconds > 0 ? seconds : null;
+};
+
+const formatTotal = (sec: number) => {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
+};
+
+const isToday = (iso: string) => {
+    const d = new Date(iso);
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+};
+
 export const Focus: React.FC<FocusProps> = ({ categories, onCategoriesChange }) => {
     const [sessions, setSessions] = useState<TimerSession[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [filterCategoryId, setFilterCategoryId] = useState<string>('all');
+    const [pendingDelete, setPendingDelete] = useState<TimerSession | null>(null);
 
-    const fetchSessions = async () => {
+    const fetchSessions = useCallback(async () => {
         try {
-            const data = await api.timerSessions.getAll();
-            setSessions(data);
-        } catch (error) {
-            console.error('Failed to fetch sessions:', error);
+            setSessions(await api.timerSessions.getAll());
+        } catch (err) {
+            console.error('Failed to fetch sessions:', err);
         } finally {
             setIsLoading(false);
         }
-    };
-
-    useEffect(() => {
-        fetchSessions();
     }, []);
 
-    // Calcula tiempo total por categoría
-    const totalsByCategory = sessions.reduce((acc, session) => {
-        acc[session.categoryId] = (acc[session.categoryId] || 0) + session.durationSec;
+    useEffect(() => { fetchSessions(); }, [fetchSessions]);
+
+    const todaySessions = sessions.filter(s => isToday(s.startedAt));
+    const totalsByCategory = todaySessions.reduce((acc, s) => {
+        acc[s.categoryId] = (acc[s.categoryId] || 0) + s.durationSec;
         return acc;
     }, {} as Record<string, number>);
+    const totalToday = todaySessions.reduce((acc, s) => acc + s.durationSec, 0);
 
-    // Filter sessions for history
-    const filteredSessions = filterCategoryId === 'all'
-        ? sessions
-        : sessions.filter(s => s.categoryId === filterCategoryId);
+    const confirmDelete = async () => {
+        if (!pendingDelete?.id) return;
+        await api.timerSessions.delete(pendingDelete.id);
+        setPendingDelete(null);
+        fetchSessions();
+    };
 
     return (
-        <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-24">
-            <header className="flex flex-col gap-4 mb-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground mb-2">Focus Mode</h1>
-                    <p className="text-muted-foreground">Concéntrate en tus tareas y registra el tiempo dedicado.</p>
-                </div>
-            </header>
+        <div className="mx-auto w-full max-w-3xl px-3.5 pb-32 md:px-8 md:pb-12">
+            <Sec accent="var(--v6-green)" title="cronómetro" comment="// tiempo dedicado a un hábito">
+                <FocusTimer
+                    categories={categories}
+                    onSessionComplete={fetchSessions}
+                    onCategoriesChange={onCategoriesChange}
+                />
+            </Sec>
 
-            <div className="flex flex-col lg:flex-row gap-8">
-                {/* Panel Izquierdo: Timer */}
-                <div className="flex-1 space-y-8">
-                    <FocusTimer categories={categories} onSessionComplete={fetchSessions} onCategoriesChange={onCategoriesChange} />
-
-                    {/* Resumen de Tiempos Totales */}
-                    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-                        <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                            <Clock size={18} className="text-primary" /> Tiempo Invertido
-                        </h3>
-
-                        <div className="space-y-3">
-                            {categories.filter(c => totalsByCategory[c.id] > 0).map(cat => {
-                                const totalSec = totalsByCategory[cat.id];
-                                const h = Math.floor(totalSec / 3600);
-                                const m = Math.floor((totalSec % 3600) / 60);
-                                const timeStr = h > 0 ? `${h}h ${m} m` : `${m} m`;
-
-                                return (
-                                    <div key={cat.id} className="flex items-center justify-between p-3 rounded-xl bg-background border border-border">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full flex items-center justify-center border border-border" style={{ backgroundColor: `${cat.color}15` }}>
-                                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }}></div>
-                                            </div>
-                                            <span className="font-medium text-foreground text-sm">{cat.name}</span>
-                                        </div>
-                                        <span className="font-mono text-sm font-semibold text-muted-foreground">{timeStr}</span>
+            <Sec
+                accent="var(--v6-amber)"
+                title="tiempo"
+                right="hoy"
+                comment="// acumulado del día frente a la meta"
+            >
+                {categories.filter(c => totalsByCategory[c.id] > 0).length === 0 ? (
+                    <p className="text-11 text-subtle">{'// sin tiempo registrado hoy'}</p>
+                ) : (
+                    <div className="flex flex-col gap-2.5">
+                        {categories.filter(c => totalsByCategory[c.id] > 0).map(cat => {
+                            const seconds = totalsByCategory[cat.id];
+                            const target = parseTargetSeconds(cat.target);
+                            const pct = target ? Math.min(100, Math.round((seconds / target) * 100)) : 100;
+                            const color = toPaletteHex(cat.color);
+                            return (
+                                <div key={cat.id} className="flex flex-col gap-1.5">
+                                    <div className="flex items-baseline gap-2 text-12">
+                                        <span style={{ color }}>{cat.name.toLowerCase()}</span>
+                                        <span className="ml-auto font-bold text-foreground">{formatTotal(seconds)}</span>
+                                        <span className="w-11 text-right text-10 tracking-[.3px] text-subtle">{cat.target}</span>
                                     </div>
-                                );
-                            })}
-
-                            {Object.keys(totalsByCategory).length === 0 && !isLoading && (
-                                <p className="text-sm text-muted-foreground text-center py-4 italic">Aún no hay tiempo registrado.</p>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Panel Derecho: Historial */}
-                <div className="flex-1 lg:max-w-md">
-                    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm h-full max-h-[800px] flex flex-col">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 shrink-0">
-                            <h3 className="font-semibold text-foreground">Historial de Sesiones</h3>
-                            <select
-                                value={filterCategoryId}
-                                onChange={(e) => setFilterCategoryId(e.target.value)}
-                                className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer"
-                            >
-                                <option value="all">Todas las actividades</option>
-                                {categories.map(cat => (
-                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto pr-2 -mr-2">
-                            {isLoading ? (
-                                <div className="text-center py-8 text-muted-foreground text-sm">Cargando...</div>
-                            ) : filteredSessions.length > 0 ? (
-                                <div className="space-y-1">
-                                    {filteredSessions.map(session => (
-                                        <TimerSessionCard
-                                            key={session.id}
-                                            session={session}
-                                            categories={categories}
-                                            onDelete={fetchSessions}
-                                        />
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-12 flex flex-col items-center justify-center">
-                                    <div className="w-16 h-16 rounded-full bg-border flex items-center justify-center mb-4">
-                                        <Clock size={24} className="text-muted-foreground opacity-50" />
+                                    <div className="v6-track">
+                                        <span className="v6-fill" style={{ width: `${pct}%`, ['--v6-fill' as string]: color }} />
                                     </div>
-                                    <p className="text-muted-foreground font-medium text-sm">Sin sesiones {filterCategoryId !== 'all' ? 'para esta actividad' : 'registradas'}</p>
-                                    <p className="text-xs text-muted-foreground mt-1 text-balance">
-                                        {filterCategoryId !== 'all' ? 'Inicia un cronómetro con esta actividad.' : 'Inicia el cronómetro para comenzar a registrar tu tiempo de foco.'}
-                                    </p>
                                 </div>
-                            )}
-                        </div>
+                            );
+                        })}
                     </div>
+                )}
+            </Sec>
+
+            <Sec
+                accent="var(--v6-violet)"
+                title="sesiones"
+                right={todaySessions.length > 0 ? `${todaySessions.length} · ${formatTotal(totalToday)}` : undefined}
+                comment="// sesiones guardadas hoy"
+            >
+                {isLoading ? (
+                    <p className="text-11 text-subtle">{'// cargando…'}</p>
+                ) : todaySessions.length === 0 ? (
+                    <p className="text-11 text-subtle">{'// inicia el cronómetro para registrar tiempo'}</p>
+                ) : (
+                    <div className="flex flex-col gap-1.5">
+                        {todaySessions.map(session => (
+                            <TimerSessionCard
+                                key={session.id}
+                                session={session}
+                                categories={categories}
+                                onDelete={fetchSessions}
+                                onRequestDelete={setPendingDelete}
+                            />
+                        ))}
+                    </div>
+                )}
+            </Sec>
+
+            <Modal
+                isOpen={pendingDelete !== null}
+                onClose={() => setPendingDelete(null)}
+                title="borrar sesión"
+                comment="// esta acción no se puede deshacer"
+                destructive
+            >
+                <div className="flex items-center gap-2">
+                    <Box accent="var(--v6-red)" onClick={confirmDelete} className="flex-1">borrar</Box>
+                    <Box accent="var(--v6-dim)" onClick={() => setPendingDelete(null)} className="w-28">cancelar</Box>
                 </div>
-            </div>
+            </Modal>
         </div>
     );
 };

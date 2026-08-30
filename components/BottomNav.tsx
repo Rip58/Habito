@@ -1,41 +1,46 @@
 import React from 'react';
-import { LayoutDashboard, Settings, Timer } from 'lucide-react';
 import { Page } from '../types';
+import { NAV_ITEMS, accentFor } from './v6/nav';
 
 interface BottomNavProps {
     currentPage: Page;
     onNavigate: (page: Page) => void;
 }
 
+/**
+ * El prompt hace de menú: dice dónde estás con el cursor parpadeando, y debajo
+ * los destinos entre corchetes. La celda de toque es el ancho completo dividido
+ * entre destinos por 44px de alto — el mínimo para el dedo, no el texto.
+ */
 export const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onNavigate }) => {
-    const navItems = [
-        { id: Page.OVERVIEW, label: 'Resumen', icon: <LayoutDashboard size={20} /> },
-        { id: Page.FOCUS, label: 'Focus', icon: <Timer size={20} /> },
-        { id: Page.SETTINGS, label: 'Ajustes', icon: <Settings size={20} /> },
-    ];
+    const accent = accentFor(currentPage);
+    const label = NAV_ITEMS.find(i => i.id === currentPage)?.label ?? String(currentPage);
 
     return (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-md border-t border-border flex justify-around items-center px-2 pb-[env(safe-area-inset-bottom)] pt-2 z-50 h-[calc(4rem+env(safe-area-inset-bottom))]">
-            {navItems.map((item) => {
-                const isActive = currentPage === item.id;
-                return (
-                    <button
-                        key={item.id}
-                        onClick={() => onNavigate(item.id as Page)}
-                        className={`tap-highlight-transparent flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-200 active:scale-[0.96] rounded-xl ${isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-                            }`}
-                    >
-                        <div className={`p-1.5 rounded-xl transition-all duration-200 ${isActive ? 'bg-primary/10' : ''
-                            }`}>
-                            {item.icon}
-                        </div>
-                        <span className={`text-[10px] font-medium transition-all duration-200 ${isActive ? 'text-primary' : 'text-muted-foreground'
-                            }`}>
-                            {item.label}
-                        </span>
-                    </button>
-                );
-            })}
+        <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background px-3.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:hidden">
+            <div className="text-12 text-muted">
+                <span className="text-green">$</span> <span className="text-subtle">cd</span>{' '}
+                <span className="font-bold" style={{ color: accent }}>{label}</span>
+                <span className="v6-cursor" style={{ color: accent }} />
+            </div>
+            <div className="mt-0.5 flex items-stretch" style={{ height: 44 }}>
+                {NAV_ITEMS.map(item => {
+                    const active = currentPage === item.id;
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => onNavigate(item.id)}
+                            aria-current={active ? 'page' : undefined}
+                            className="tap-highlight-transparent flex flex-1 items-center justify-center text-12"
+                        >
+                            [<span
+                                className={active ? 'font-bold' : ''}
+                                style={{ color: active ? item.accent : 'var(--v6-dim)' }}
+                            >{item.label}</span>]
+                        </button>
+                    );
+                })}
+            </div>
         </nav>
     );
 };
