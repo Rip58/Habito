@@ -35,8 +35,6 @@ export interface NavItem {
 export enum Page {
   OVERVIEW = 'overview',
   FOCUS = 'focus',
-  LOGS = 'logs',
-  ALERTS = 'alerts',
   SETTINGS = 'settings',
 }
 

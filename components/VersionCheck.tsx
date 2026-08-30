@@ -1,101 +1,98 @@
-import React, { useEffect, useState, createContext, useContext } from 'react';
-import { RefreshCw } from 'lucide-react';
+"use client";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import buildInfo from '../public/version.json';
+import { Cmd } from './v6/Button';
 
-interface VersionInfo {
-    buildHash: string;
+export interface VersionInfo {
+    buildId: string;
+    commit: string;
     buildDate: string;
-    deployNumber: number;
 }
 
+// Horneado en el bundle al compilar: la versión que ESTA pestaña ejecuta, no la
+// que el servidor sirve ahora mismo. Esa diferencia es todo el mecanismo.
+const RUNNING: VersionInfo = buildInfo;
+
+const CHECK_INTERVAL_MS = 5 * 60 * 1000;
+
 interface VersionContextType {
-    currentVersion: VersionInfo | null;
+    currentVersion: VersionInfo;
+    updateAvailable: boolean;
     checkForUpdates: () => Promise<void>;
     isChecking: boolean;
+    lastCheckedAt: Date | null;
 }
 
 const VersionContext = createContext<VersionContextType>({
-    currentVersion: null,
+    currentVersion: RUNNING,
+    updateAvailable: false,
     checkForUpdates: async () => { },
-    isChecking: false
+    isChecking: false,
+    lastCheckedAt: null,
 });
 
 export const useVersion = () => useContext(VersionContext);
 
 export const VersionCheck: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [currentVersion, setCurrentVersion] = useState<VersionInfo | null>(null);
+    const [updateAvailable, setUpdateAvailable] = useState(false);
     const [isChecking, setIsChecking] = useState(false);
-    const [showUpdateNotification, setShowUpdateNotification] = useState(false);
+    const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
+    const [dismissed, setDismissed] = useState(false);
+    const inFlight = useRef(false);
 
-    // Load local version on mount
-    useEffect(() => {
-        loadLocalVersion();
-    }, []);
-
-    // Check for updates on mount (after login)
-    useEffect(() => {
-        if (currentVersion) {
-            checkForUpdates();
-        }
-    }, [currentVersion?.buildHash]); // Only run when version is first loaded
-
-    const loadLocalVersion = async () => {
-        try {
-            const response = await fetch('/version.json');
-            if (response.ok) {
-                const version = await response.json();
-                setCurrentVersion(version);
-                // Store in localStorage for comparison
-                localStorage.setItem('app_version', JSON.stringify(version));
-            }
-        } catch (error) {
-            console.error('Failed to load local version:', error);
-        }
-    };
-
-    const checkForUpdates = async () => {
+    const checkForUpdates = useCallback(async () => {
+        if (inFlight.current) return;
+        inFlight.current = true;
         setIsChecking(true);
         try {
-            // In development, fetch directly from /version.json
-            // In production (Vercel), the API endpoint will work
-            const endpoint = process.env.NODE_ENV === 'production' ? '/api/version' : '/version.json';
-            const response = await fetch(endpoint);
-
-            if (response.ok) {
-                const serverVersion: VersionInfo = await response.json();
-
-                // Compare with current version
-                if (currentVersion && serverVersion.buildHash !== currentVersion.buildHash) {
-                    console.log('New version detected:', serverVersion);
-                    setShowUpdateNotification(true);
-
-                    // Force reload after 3 seconds
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 3000);
-                } else {
-                    console.log('App is up to date');
-                }
+            const response = await fetch('/api/v1/version', { cache: 'no-store' });
+            if (!response.ok) return;
+            const served: VersionInfo = await response.json();
+            if (served.buildId && served.buildId !== RUNNING.buildId) {
+                setUpdateAvailable(true);
+                setDismissed(false);
             }
-        } catch (error) {
-            console.error('Failed to check for updates:', error);
+            setLastCheckedAt(new Date());
+        } catch {
+            // Sin red o sesión caducada: se reintenta en el siguiente ciclo.
         } finally {
+            inFlight.current = false;
             setIsChecking(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        checkForUpdates();
+        const timer = setInterval(checkForUpdates, CHECK_INTERVAL_MS);
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible') checkForUpdates();
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => {
+            clearInterval(timer);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+        };
+    }, [checkForUpdates]);
 
     return (
-        <VersionContext.Provider value={{ currentVersion, checkForUpdates, isChecking }}>
+        <VersionContext.Provider
+            value={{ currentVersion: RUNNING, updateAvailable, checkForUpdates, isChecking, lastCheckedAt }}
+        >
             {children}
 
-            {/* Update Notification */}
-            {showUpdateNotification && (
-                <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in">
-                    <div className="bg-primary text-bg-dark px-6 py-4 rounded-xl shadow-2xl shadow-primary/20 flex items-center gap-3">
-                        <RefreshCw className="animate-spin" size={20} />
-                        <div>
-                            <p className="font-bold">Nueva versión disponible</p>
-                            <p className="text-sm opacity-90">Actualizando en 3 segundos...</p>
-                        </div>
+            {updateAvailable && !dismissed && (
+                <div
+                    role="status"
+                    className="fixed left-1/2 top-3 z-[70] w-[min(26rem,calc(100vw-1.75rem))] -translate-x-1/2 rounded border border-border bg-surface px-3 py-2.5"
+                    style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}
+                >
+                    <div className="text-12">
+                        <span className="text-green">$</span>{' '}
+                        <span className="font-bold text-white">versión nueva disponible</span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-4">
+                        <Cmd strong onClick={() => window.location.reload()}>actualizar</Cmd>
+                        <Cmd accent="var(--v6-dim)" onClick={() => setDismissed(true)}>ahora no</Cmd>
                     </div>
                 </div>
             )}

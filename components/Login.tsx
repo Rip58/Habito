@@ -1,108 +1,96 @@
+"use client";
 import React from 'react';
-import { Activity, AlertCircle, ArrowRight } from 'lucide-react';
+import { Box } from './v6/Button';
 
 interface LoginProps {
     onLogin: (pin: string) => void;
-    error?: boolean;
+    error?: string | null;
+    isSubmitting?: boolean;
 }
 
-export const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
+export const Login: React.FC<LoginProps> = ({ onLogin, error, isSubmitting = false }) => {
     const [pin, setPin] = React.useState(['', '', '', '']);
     const inputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
     const handleChange = (index: number, value: string) => {
-        if (value.length > 1) value = value[value.length - 1];
-
-        const newPin = [...pin];
-        newPin[index] = value;
-        setPin(newPin);
-
-        if (value !== '' && index < 3) {
-            inputRefs.current[index + 1]?.focus();
-        }
-
-        if (index === 3 && value !== '') {
-            onLogin(newPin.join(''));
-        }
+        const digit = value.replace(/\D/g, '').slice(-1);
+        const next = [...pin];
+        next[index] = digit;
+        setPin(next);
+        if (digit !== '' && index < 3) inputRefs.current[index + 1]?.focus();
+        if (index === 3 && digit !== '') onLogin(next.join(''));
     };
 
     const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-        if (e.key === 'Backspace' && !pin[index] && index > 0) {
-            inputRefs.current[index - 1]?.focus();
-        }
+        if (e.key === 'Backspace' && !pin[index] && index > 0) inputRefs.current[index - 1]?.focus();
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onLogin(pin.join(''));
-    };
+    const complete = pin.every(d => d !== '');
 
     return (
-        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-            <div className="w-full max-w-sm space-y-8 fade-in">
-
-                {/* Logo + Title */}
-                <div className="flex flex-col items-center text-center gap-4">
-                    <div className="w-16 h-16 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center">
-                        <Activity className="text-primary w-8 h-8" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-semibold text-foreground">Bienvenido</h1>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Introduce tu PIN para acceder
-                        </p>
-                    </div>
+        <div className="flex min-h-screen flex-col justify-center bg-background p-3.5">
+            <form
+                onSubmit={(e) => { e.preventDefault(); onLogin(pin.join('')); }}
+                className="mx-auto flex w-full max-w-[360px] flex-col gap-[22px]"
+            >
+                <div className="text-13">
+                    <span className="text-green">sergi</span>
+                    <span className="text-blue">@habitos</span>
+                    <span className="text-subtle">:~</span>
+                    <span className="text-green">$</span>{' '}
+                    <span className="font-bold text-white">auth --pin</span>
+                    <span className="v6-cursor text-white" />
                 </div>
 
-                {/* PIN form */}
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="flex justify-center gap-3">
-                        {pin.map((digit, index) => (
-                            <div key={index} className="relative">
-                                <input
-                                    ref={el => { inputRefs.current[index] = el; }}
-                                    type="password"
-                                    inputMode="numeric"
-                                    pattern="[0-9]*"
-                                    maxLength={1}
-                                    value={digit}
-                                    onChange={(e) => handleChange(index, e.target.value)}
-                                    onKeyDown={(e) => handleKeyDown(index, e)}
-                                    className="w-14 h-14 bg-card border-2 border-border rounded-xl text-center text-xl font-semibold text-foreground focus:border-primary focus:ring-4 focus:ring-ring/20 transition-all outline-none"
-                                />
-                                {digit && (
-                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                        <div className="w-3 h-3 bg-foreground rounded-full" />
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
+                <p className="text-11 text-subtle">{'// introduce los 4 dígitos'}</p>
 
-                    {/* Error */}
+                <div className="flex gap-2">
+                    {pin.map((digit, index) => (
+                        <div key={index} className="relative flex-1">
+                            <input
+                                ref={el => { inputRefs.current[index] = el; }}
+                                type="password"
+                                inputMode="numeric"
+                                autoComplete="off"
+                                aria-label={`Dígito ${index + 1} de 4`}
+                                maxLength={1}
+                                value={digit}
+                                autoFocus={index === 0}
+                                disabled={isSubmitting}
+                                onChange={(e) => handleChange(index, e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(index, e)}
+                                /* Texto transparente: el cuadrado lo dibuja el div de abajo,
+                                   para no rendererizar dos marcas superpuestas. */
+                                className="h-14 w-full rounded border bg-surface text-center text-transparent caret-transparent outline-none focus:border-green disabled:opacity-60"
+                            />
+                            {digit && (
+                                <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                    <span className="h-2 w-2 rounded-sm bg-foreground" />
+                                </span>
+                            )}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Altura reservada: el mensaje no empuja el layout al aparecer. */}
+                <div className="min-h-[34px]">
                     {error && (
-                        <div className="bg-destructive/10 text-destructive border border-destructive/20 p-3 rounded-lg flex items-center gap-3 text-sm fade-in">
-                            <AlertCircle size={16} />
-                            <span className="font-medium">PIN incorrecto. Inténtalo de nuevo.</span>
+                        <div
+                            role="alert"
+                            className="rounded border px-2 py-1.5 text-11"
+                            style={{ borderColor: 'var(--v6-red)', background: 'rgba(232,83,110,0.1)', color: 'var(--v6-red)' }}
+                        >
+                            {error}
                         </div>
                     )}
+                </div>
 
-                    {/* Submit */}
-                    <button
-                        type="button"
-                        onClick={() => onLogin(pin.join(''))}
-                        className="w-full h-11 bg-primary text-primary-foreground font-semibold rounded-md transition-all flex items-center justify-center gap-2 group hover:opacity-90 active:scale-[0.99]"
-                    >
-                        <span>Acceder</span>
-                        <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
-                    </button>
-                </form>
+                <Box type="submit" disabled={!complete || isSubmitting} className="w-full">
+                    {isSubmitting ? 'comprobando…' : 'acceder'}
+                </Box>
 
-                {/* Footer */}
-                <p className="text-center text-xs text-muted-foreground uppercase tracking-wider">
-                    Habitos Pro · Acceso seguro
-                </p>
-            </div>
+                <p className="text-11 text-subtle">{'// bloqueo local de este dispositivo'}</p>
+            </form>
         </div>
     );
 };

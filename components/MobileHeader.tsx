@@ -1,17 +1,8 @@
 import React from 'react';
-import { Activity } from 'lucide-react';
+import { Prompt } from './v6/Prompt';
 
-export const MobileHeader: React.FC = () => {
-    return (
-        <header className="md:hidden bg-background/80 backdrop-blur-md border-b border-border z-[60] px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] flex items-center justify-between sticky top-0">
-            <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-center">
-                    <Activity className="text-primary" size={16} />
-                </div>
-                <span className="text-base font-semibold text-foreground tracking-tight">
-                    Habitos Pro
-                </span>
-            </div>
-        </header>
-    );
-};
+export const MobileHeader: React.FC<{ section: string; right?: React.ReactNode }> = ({ section, right }) => (
+    <header className="sticky top-0 z-[60] bg-background px-3.5 pb-2 pt-[calc(0.75rem+env(safe-area-inset-top))] md:hidden">
+        <Prompt section={section} right={right} />
+    </header>
+);

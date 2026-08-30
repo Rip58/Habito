@@ -26,3 +26,11 @@ dist-ssr
 *.sw?
 
 /generated/prisma
+
+# Env (nunca commitear: contiene credenciales)
+.env
+.env.local
+.env.*.local
+
+# Build info
+tsconfig.tsbuildinfo

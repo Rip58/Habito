@@ -1,11 +1,11 @@
 {
-  "name": "activator-dashboard",
+  "name": "habitos-pro",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "npx prisma generate && next build",
+    "build": "npx prisma generate && tsx scripts/generate-version.ts && next build",
     "prebuild": "npm run clean:garbage",
     "start": "next start",
     "clean:garbage": "chmod +x ./scripts/clean-garbage.sh && ./scripts/clean-garbage.sh",
@@ -15,21 +15,22 @@
     "@prisma/adapter-pg": "^6.0.0",
     "@prisma/client": "^6.0.0",
     "@swc/helpers": "^0.5.18",
-    "dexie": "^4.3.0",
-    "dexie-react-hooks": "^4.2.0",
     "lucide-react": "^0.563.0",
     "next": "15.1.9",
     "pg": "^8.18.0",
     "prisma": "^6.0.0",
     "react": "19.0.0",
-    "react-dom": "19.0.0",
-    "recharts": "^3.7.0"
+    "react-dom": "19.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@types/pg": "^8.16.0",
+    "@types/react": "19.2.18",
     "@vercel/node": "^5.6.1",
+    "autoprefixer": "^10.5.4",
     "dotenv": "^17.3.1",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^3.4.19",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2"
   }

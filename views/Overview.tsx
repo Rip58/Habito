@@ -1,533 +1,387 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { SummaryCards } from '../components/SummaryCards';
+"use client";
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityLog, Category, HeatmapDay } from '../types';
+import { api } from '../lib/api';
 import { Heatmap } from '../components/Heatmap';
 import { LogTable } from '../components/LogTable';
-import { Plus, ChevronDown, ChevronUp, Zap } from 'lucide-react';
+import { Stats } from '../components/Stats';
 import { Modal } from '../components/Modal';
-import { Category, HeatmapDay, ActivityLog } from '../types';
-import { api, Log } from '../lib/api';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Sec } from '../components/v6/Sec';
+import { Box, Cmd } from '../components/v6/Button';
+import { DiffRow } from '../components/v6/DiffRow';
+import { Select } from '../components/v6/Select';
+import { Label, inputClass } from '../components/v6/Field';
+import { toPaletteHex } from '../components/v6/nav';
 
 interface OverviewProps {
     categories?: Category[];
     onCategoriesChange?: () => void;
 }
 
-export const Overview: React.FC<OverviewProps> = ({ categories = [], onCategoriesChange }) => {
+type Range = '1M' | '3M' | '12M';
+const RANGES: { id: Range; label: string }[] = [
+    { id: '1M', label: '1m' },
+    { id: '3M', label: '3m' },
+    { id: '12M', label: '1a' },
+];
+
+const dayKey = (date: Date | string) => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
     const [logs, setLogs] = useState<ActivityLog[]>([]);
-    const [heatmapTimeRange, setHeatmapTimeRange] = useState<'1M' | '3M' | '6M' | '12M'>('12M');
-    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-    const [selectedAccount, setSelectedAccount] = useState(
-        () => (typeof window !== 'undefined' && localStorage.getItem('habito_selected_account')) || 'all'
-    );
-    const [isHeatmapExpanded, setIsHeatmapExpanded] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [range, setRange] = useState<Range>('3M');
 
-    // Ratio selector (header button + popover)
-    const [isRatioOpen, setIsRatioOpen] = useState(false);
-    const [ratioNum, setRatioNum] = useState(
-        () => (typeof window !== 'undefined' && localStorage.getItem('habito_ratio_num')) || categories[0]?.id || 'all'
-    );
-    const [ratioDenom, setRatioDenom] = useState(
-        () => (typeof window !== 'undefined' && localStorage.getItem('habito_ratio_denom')) || categories[1]?.id || 'all'
-    );
-
-    useEffect(() => {
-        localStorage.setItem('habito_selected_account', selectedAccount);
-    }, [selectedAccount]);
-
-    useEffect(() => {
-        localStorage.setItem('habito_ratio_num', ratioNum);
-    }, [ratioNum]);
-
-    useEffect(() => {
-        localStorage.setItem('habito_ratio_denom', ratioDenom);
-    }, [ratioDenom]);
+    const [logModalOpen, setLogModalOpen] = useState(false);
+    const [editingLogId, setEditingLogId] = useState<string | null>(null);
+    const [count, setCount] = useState(1);
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [note, setNote] = useState('');
+    const [selectedDate, setSelectedDate] = useState(() => dayKey(new Date()));
+    const [viewingDate, setViewingDate] = useState<string | null>(null);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
 
     const fetchLogs = useCallback(async () => {
         try {
             const data = await api.logs.getAll();
-            const formattedLogs = data.map(log => ({ ...log, dateObj: new Date(log.dateObj) }));
-            setLogs(formattedLogs);
-        } catch (err: any) {
+            setLogs(data.map(log => ({ ...log, dateObj: new Date(log.dateObj) })));
+            setError(null);
+        } catch (err) {
             console.error('Failed to fetch logs:', err);
-            alert('Debug: Failed to fetch logs (GET). ' + (err.message || JSON.stringify(err)));
+            setError('no se pudieron cargar los registros');
         }
     }, []);
 
     useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
-    const getLocalDateKey = (date: Date | string) => {
-        const d = typeof date === 'string' ? new Date(date) : date;
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    };
+    const enabled = categories.filter(c => c.enabled);
 
-    // Generate heatmap data for a single category (each habit gets its own heatmap)
-    const getHeatmapData = (categoryId: string): HeatmapDay[] => {
-        const filteredLogs = logs.filter(log => (log.categoryId === categoryId) || (log.category === categoryId));
-        const daysMap = new Map<string, number>();
-        filteredLogs.forEach(log => {
-            if (log.dateObj) {
-                const dateKey = getLocalDateKey(log.dateObj);
-                daysMap.set(dateKey, (daysMap.get(dateKey) || 0) + 1);
+    // Un solo recorrido de los logs y un solo rango de fechas para TODAS las
+    // categorías, memorizado.
+    const heatmapByCategory = useMemo(() => {
+        const counts = new Map<string, Map<string, number>>();
+        logs.forEach(log => {
+            if (!log.dateObj) return;
+            const key = dayKey(log.dateObj);
+            for (const id of [log.categoryId, log.category]) {
+                if (!id) continue;
+                let days = counts.get(id);
+                if (!days) { days = new Map(); counts.set(id, days); }
+                days.set(key, (days.get(key) || 0) + 1);
             }
         });
-        const currentYear = new Date().getFullYear();
-        const today = new Date();
-        let start: Date;
-        let end: Date = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
 
-        switch (heatmapTimeRange) {
+        const today = new Date();
+        let end = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+        let start: Date;
+        switch (range) {
             case '1M': start = new Date(end); start.setUTCDate(start.getUTCDate() - 30); break;
             case '3M': start = new Date(end); start.setUTCDate(start.getUTCDate() - 90); break;
-            case '6M': start = new Date(end); start.setUTCDate(start.getUTCDate() - 180); break;
-            case '12M':
             default:
-                start = new Date(Date.UTC(currentYear, 0, 1));
-                end = new Date(Date.UTC(currentYear, 11, 31));
+                start = new Date(Date.UTC(today.getFullYear(), 0, 1));
+                end = new Date(Date.UTC(today.getFullYear(), 11, 31));
                 break;
         }
 
-        const days: HeatmapDay[] = [];
-        const loopDate = new Date(start);
-        while (loopDate <= end) {
-            const dateStr = `${loopDate.getUTCFullYear()}-${String(loopDate.getUTCMonth() + 1).padStart(2, '0')}-${String(loopDate.getUTCDate()).padStart(2, '0')}`;
-            const count = daysMap.get(dateStr) || 0;
-            let level: 0 | 1 | 2 | 3 | 4 = 0;
-            if (count > 0) level = 4;
-            days.push({ date: dateStr, count, level });
-            loopDate.setUTCDate(loopDate.getUTCDate() + 1);
+        const keys: string[] = [];
+        const cursor = new Date(start);
+        while (cursor <= end) {
+            keys.push(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, '0')}-${String(cursor.getUTCDate()).padStart(2, '0')}`);
+            cursor.setUTCDate(cursor.getUTCDate() + 1);
         }
-        return days;
-    };
 
-    // Log Modal state
-    const [isLogModalOpen, setIsLogModalOpen] = useState(false);
-    const [count, setCount] = useState(1);
-    const [selectedCategory, setSelectedCategory] = useState('');
-    const [note, setNote] = useState('');
+        const out = new Map<string, HeatmapDay[]>();
+        categories.forEach(cat => {
+            const days = counts.get(cat.id) ?? counts.get(cat.name) ?? new Map<string, number>();
+            out.set(cat.id, keys.map(date => {
+                const c = days.get(date) || 0;
+                return { date, count: c, level: (c === 0 ? 0 : c >= 4 ? 4 : c) as 0 | 1 | 2 | 3 | 4 };
+            }));
+        });
+        return out;
+    }, [logs, categories, range]);
 
-    const getTodayStr = () => {
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    };
+    const todayKey = dayKey(new Date());
+    const doneToday = useMemo(() => {
+        const set = new Set<string>();
+        logs.forEach(log => {
+            if (log.dateObj && dayKey(log.dateObj) === todayKey) {
+                if (log.categoryId) set.add(log.categoryId);
+                if (log.category) set.add(log.category);
+            }
+        });
+        return set;
+    }, [logs, todayKey]);
 
-    const [selectedDate, setSelectedDate] = useState(getTodayStr());
-    const [viewingDate, setViewingDate] = useState<string | null>(null);
-    const [editingLogId, setEditingLogId] = useState<string | null>(null);
+    const doneCount = enabled.filter(c => doneToday.has(c.id) || doneToday.has(c.name)).length;
 
-    const selectedDayLogs = logs.filter(log => {
-        if (!viewingDate || !log.dateObj) return false;
-        return getLocalDateKey(log.dateObj) === viewingDate;
-    });
+    const dayLogs = logs.filter(log => viewingDate && log.dateObj && dayKey(log.dateObj) === viewingDate);
 
-    const handleDeleteLog = (id: string | number) => setDeleteConfirmId(String(id));
-
-    const confirmDelete = async () => {
-        if (deleteConfirmId !== null) {
-            await api.logs.delete(deleteConfirmId);
-            setDeleteConfirmId(null);
-            fetchLogs();
-        }
+    const openLogModal = (categoryId?: string, date?: string) => {
+        setEditingLogId(null);
+        setSelectedCategory(categoryId ?? enabled[0]?.id ?? '');
+        setSelectedDate(date ?? todayKey);
+        setNote('');
+        setCount(1);
+        setLogModalOpen(true);
     };
 
     const handleEditLog = (log: ActivityLog) => {
         if (!log.id) return;
         setViewingDate(null);
         setEditingLogId(String(log.id));
-        if (log.dateObj) {
-            const d = typeof log.dateObj === 'string' ? new Date(log.dateObj) : log.dateObj;
-            setSelectedDate(getLocalDateKey(d));
-        }
+        if (log.dateObj) setSelectedDate(dayKey(log.dateObj));
         setSelectedCategory(log.categoryId || categories.find(c => c.name === log.category)?.id || '');
         setNote(log.eventName.replace(`Sesión de ${log.category}`, '').trim());
         setCount(1);
-        setIsLogModalOpen(true);
+        setLogModalOpen(true);
     };
 
-    const handleAddLog = async () => {
+    const handleSaveLog = async () => {
         try {
-            const categoryIdToUse = selectedCategory || (categories.length > 0 ? categories[0].id : '');
-            const categoryObj = categories.find(c => c.id === categoryIdToUse);
-            const categoryName = categoryObj ? categoryObj.name : 'General';
-            const [year, month, day] = selectedDate.split('-').map(Number);
+            const categoryId = selectedCategory || enabled[0]?.id || '';
+            const category = categories.find(c => c.id === categoryId);
+            const name = category?.name ?? 'General';
+            const [y, m, d] = selectedDate.split('-').map(Number);
             const now = new Date();
-            const newDateObj = new Date(year, month - 1, day, now.getHours(), now.getMinutes());
+            const when = new Date(y, m - 1, d, now.getHours(), now.getMinutes());
 
-            const logData = {
-                timestamp: newDateObj.toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-                dateObj: newDateObj.toISOString(),
-                eventName: note || `Sesión de ${categoryName}`,
-                category: categoryName,
-                categoryId: categoryIdToUse,
-                intensity: 50 + (count * 10),
+            const payload = {
+                timestamp: when.toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+                dateObj: when.toISOString(),
+                eventName: note || `Sesión de ${name}`,
+                category: name,
+                categoryId,
+                intensity: 1,
                 status: 'COMPLETED' as const,
             };
 
             if (editingLogId) {
-                await api.logs.update(editingLogId, logData);
+                await api.logs.update(editingLogId, payload);
             } else {
-                await api.logs.create(logData);
+                // El contador crea N registros: el mapa y las cifras cuentan
+                // filas, no un campo `intensity` que no lee nadie.
+                await Promise.all(Array.from({ length: Math.max(1, count) }, () => api.logs.create(payload)));
             }
 
-            setIsLogModalOpen(false);
+            setLogModalOpen(false);
+            setEditingLogId(null);
             setNote('');
             setCount(1);
-            setEditingLogId(null);
-            setSelectedDate(getTodayStr());
             fetchLogs();
-        } catch (error: any) {
-            console.error('Save failed:', error);
-            alert('Error al guardar: ' + (error.message || 'Error desconocido'));
+        } catch (err) {
+            console.error('Save failed:', err);
+            setError('no se pudo guardar el registro');
         }
     };
 
-    const currentYear = new Date().getFullYear();
-    const enabledCategories = categories.filter(c => c.enabled);
-    const heatmapCategories = selectedAccount === 'all'
-        ? enabledCategories
-        : enabledCategories.filter(c => c.id === selectedAccount);
-
-    const getFilteredLogCount = (categoryId: string) =>
-        categoryId === 'all' ? logs.length : logs.filter(l => (l.categoryId === categoryId) || (l.category === categoryId)).length;
-    const ratioNumCount = getFilteredLogCount(ratioNum);
-    const ratioDenomCount = getFilteredLogCount(ratioDenom);
-    const ratioPercent = ratioDenomCount === 0 ? 0 : Math.round((ratioNumCount / ratioDenomCount) * 100);
+    const confirmDelete = async () => {
+        if (!deleteId) return;
+        await api.logs.delete(deleteId);
+        setDeleteId(null);
+        fetchLogs();
+    };
 
     return (
-        <>
-        <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-5 fade-in">
+        <div className="mx-auto w-full max-w-5xl px-3.5 pb-32 md:px-8 md:pb-12">
 
-            {/* Page Header */}
-            <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-3">
-                    <div>
-                        <h1 className="text-2xl font-semibold text-foreground tracking-tight">Resumen</h1>
-                        <p className="text-sm text-muted-foreground mt-0.5">
-                            {`1 Ene, ${currentYear} – 31 Dic, ${currentYear}`}
-                        </p>
-                    </div>
-
-                    <button
-                        onClick={() => {
-                            setEditingLogId(null);
-                            setSelectedDate(getTodayStr());
-                            setNote('');
-                            setCount(1);
-                            setIsLogModalOpen(true);
-                        }}
-                        className="h-10 bg-primary text-primary-foreground font-semibold px-4 rounded-md text-sm transition-all flex items-center gap-2 hover:opacity-90 active:scale-[0.99] shrink-0"
-                    >
-                        <Plus size={16} />
-                        <span>Registrar</span>
-                    </button>
+            {error && (
+                <div role="alert" className="mt-[22px] flex items-center gap-2 rounded border px-2 py-1.5 text-11"
+                    style={{ borderColor: 'var(--v6-red)', background: 'rgba(232,83,110,0.1)', color: 'var(--v6-red)' }}>
+                    <span className="flex-1">{error}</span>
+                    <button onClick={() => setError(null)} aria-label="Descartar">[x]</button>
                 </div>
+            )}
 
-                <div className="flex items-center gap-2 flex-wrap">
-                    <div className="relative">
-                        <select
-                            value={selectedAccount}
-                            onChange={(e) => setSelectedAccount(e.target.value)}
-                            className="h-10 appearance-none bg-muted/60 border border-border/40 hover:border-border text-sm font-medium text-foreground rounded-md pl-3 pr-8 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer transition-colors"
-                        >
-                            <option value="all">Todas las cuentas</option>
-                            {enabledCategories.map(cat => (
-                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                            ))}
-                        </select>
-                        <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Sec
+                accent="var(--v6-green)"
+                title="hoy"
+                right={`${doneCount}/${enabled.length}`}
+                comment={`// ${doneCount} de ${enabled.length} hábitos completados`}
+            >
+                {enabled.length === 0 ? (
+                    <p className="text-11 text-subtle">{'// crea un hábito en ajustes'}</p>
+                ) : (
+                    <div className="flex flex-col gap-1.5">
+                        {enabled.map(cat => {
+                            const done = doneToday.has(cat.id) || doneToday.has(cat.name);
+                            const color = toPaletteHex(cat.color);
+                            return (
+                                <DiffRow
+                                    key={cat.id}
+                                    color={done ? color : 'var(--v6-dim)'}
+                                    sign={done ? '+' : '·'}
+                                    tinted={done}
+                                    /* Altura fija: si no, las filas con [marcar] miden 54px
+                                       y las que solo dicen "hecho" 28px. */
+                                    className="min-h-[54px]"
+                                >
+                                    <span className="min-w-[44px] flex-1 truncate text-12" style={{ color: done ? 'var(--v6-fg)' : 'var(--v6-dim2)' }}>
+                                        {cat.name.toLowerCase()}
+                                    </span>
+                                    {done ? (
+                                        <span className="text-10 uppercase tracking-[.3px] text-subtle">hecho</span>
+                                    ) : (
+                                        <span className="flex min-h-[44px] items-center">
+                                            <Cmd strong onClick={() => openLogModal(cat.id)}>marcar</Cmd>
+                                        </span>
+                                    )}
+                                </DiffRow>
+                            );
+                        })}
                     </div>
+                )}
+            </Sec>
 
-                    {/* Ratio selector — button that opens a popover to pick the two categories to compare */}
-                    <div className="relative">
-                        <button
-                            onClick={() => setIsRatioOpen(!isRatioOpen)}
-                            className="h-10 bg-muted/60 border border-border/40 hover:border-border text-sm font-medium text-foreground rounded-md pl-3 pr-3 flex items-center gap-2 transition-colors"
-                        >
-                            <Zap size={14} className="text-primary" />
-                            <span>Ratio</span>
-                            <span className="text-muted-foreground tabular-nums">{ratioPercent}%</span>
-                            <ChevronDown size={14} className={`text-muted-foreground transition-transform ${isRatioOpen ? 'rotate-180' : ''}`} />
-                        </button>
+            <Sec accent="var(--v6-amber)" title="racha" comment="// días consecutivos con al menos un registro">
+                <Stats logs={logs} filter="all" />
+            </Sec>
 
-                        {isRatioOpen && (
-                            <>
-                                <div className="fixed inset-0 z-40" onClick={() => setIsRatioOpen(false)} />
-                                <div className="absolute right-0 top-full mt-2 w-64 rounded-lg border bg-card border-border/60 shadow-lg p-4 z-50">
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Comparar cuentas</p>
-                                    <div className="flex flex-col gap-1.5 mb-3">
-                                        <select
-                                            value={ratioNum}
-                                            onChange={(e) => setRatioNum(e.target.value)}
-                                            className="appearance-none bg-muted/60 border border-border/40 hover:border-border text-xs font-semibold text-foreground rounded-md pl-2.5 pr-6 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer transition-colors"
-                                        >
-                                            <option value="all">Todas</option>
-                                            {enabledCategories.map(cat => (
-                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                            ))}
-                                        </select>
-                                        <div className="h-px bg-border/40 w-full" />
-                                        <select
-                                            value={ratioDenom}
-                                            onChange={(e) => setRatioDenom(e.target.value)}
-                                            className="appearance-none bg-muted/60 border border-border/40 hover:border-border text-xs font-semibold text-foreground rounded-md pl-2.5 pr-6 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring/50 cursor-pointer transition-colors"
-                                        >
-                                            <option value="all">Todas</option>
-                                            {enabledCategories.map(cat => (
-                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <span className="text-2xl font-semibold text-foreground tabular-nums">{ratioPercent}%</span>
-                                    <p className="text-xs text-muted-foreground mt-1 font-medium">{ratioNumCount} / {ratioDenomCount} eventos</p>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Summary Cards */}
-            <SummaryCards logs={logs} categories={categories} selectedCategory={selectedAccount} />
-
-            {/* Main Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-
-                {/* Heatmaps — one per habit, filtered by the selected account (8/12) */}
-                <div className="lg:col-span-8 space-y-4">
-                    <div className="flex items-center justify-between">
-                        <button
-                            onClick={() => setIsHeatmapExpanded(!isHeatmapExpanded)}
-                            className="flex items-center gap-1.5 text-base font-semibold text-foreground hover:text-foreground/80 transition-colors"
-                        >
-                            <span>Mapa de Actividad</span>
-                            {isHeatmapExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                        </button>
-                        {isHeatmapExpanded && (
-                            <div className="flex items-center gap-0.5 bg-muted/60 p-1 rounded-md border border-border/40">
-                                {(['1M', '3M', '6M', '12M'] as const).map((range) => (
-                                    <button
-                                        key={range}
-                                        onClick={() => setHeatmapTimeRange(range)}
-                                        className={`px-2.5 py-1 rounded-sm text-xs font-medium transition-all duration-200 ${heatmapTimeRange === range
-                                            ? 'bg-card shadow-sm text-foreground'
-                                            : 'text-muted-foreground hover:text-foreground'
-                                            }`}
-                                    >
-                                        {range}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {isHeatmapExpanded && (
-                        heatmapCategories.length === 0 ? (
-                            <div className="rounded-lg border bg-card/40 border-border/40 p-8 text-center shadow-sm">
-                                <p className="text-sm text-muted-foreground">Crea una categoría para ver su mapa de actividad.</p>
-                            </div>
-                        ) : (
-                            heatmapCategories.map(cat => (
-                                <div key={cat.id} className="rounded-lg border bg-card/40 border-border/40 p-5 shadow-sm">
-                                    <Heatmap
-                                        data={getHeatmapData(cat.id)}
-                                        title={cat.name}
-                                        customColor={cat.color}
-                                        onDayClick={(date) => setViewingDate(date)}
-                                        timeRange={heatmapTimeRange}
-                                    />
-                                </div>
-                            ))
-                        )
-                    )}
-                </div>
-
-                {/* Log Table (4/12) */}
-                <div className="lg:col-span-4">
-                    <div className="rounded-lg border bg-card/40 border-border/40 p-5 h-full shadow-sm">
-                        <LogTable
-                            logs={logs}
-                            categories={categories}
-                            onEdit={handleEditLog}
-                            onDelete={handleDeleteLog}
-                        />
-                    </div>
-                </div>
-            </div>
-        </div>
-
-            {/* Modals render outside the fade-in wrapper — its animation leaves a
-                permanent `transform`, which would break position:fixed on descendants. */}
-
-            {/* ── Day Detail Modal ─────────────────────────────── */}
-            <Modal
-                isOpen={!!viewingDate}
-                onClose={() => setViewingDate(null)}
-                title={viewingDate
-                    ? new Date(viewingDate).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-                    : 'Actividad del día'
+            <Sec
+                accent="var(--v6-blue)"
+                title="mapa"
+                comment="// un mapa por hábito"
+                right={
+                    <span className="flex gap-1">
+                        {RANGES.map(r => (
+                            <Cmd
+                                key={r.id}
+                                accent={range === r.id ? 'var(--v6-blue)' : 'var(--v6-dim)'}
+                                strong={range === r.id}
+                                onClick={() => setRange(r.id)}
+                            >{r.label}</Cmd>
+                        ))}
+                    </span>
                 }
             >
-                <div className="space-y-2">
-                    {selectedDayLogs.length > 0 ? (
-                        selectedDayLogs.map(log => {
-                            const cat = categories.find(c => c.name === log.category);
+                {enabled.length === 0 ? (
+                    <p className="text-11 text-subtle">{'// sin hábitos que mostrar'}</p>
+                ) : (
+                    <div className="flex flex-col gap-3.5">
+                        {enabled.map(cat => {
+                            const color = toPaletteHex(cat.color);
+                            const data = heatmapByCategory.get(cat.id) ?? [];
+                            const active = data.filter(d => d.count > 0).length;
                             return (
-                                <div
-                                    key={log.id}
-                                    className="group flex items-center gap-3 px-4 py-3 rounded-xl bg-card/40 border border-border/40 hover:bg-card/70 transition-all duration-200"
-                                >
-                                    <div
-                                        className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border"
-                                        style={{
-                                            backgroundColor: `${cat?.color || 'var(--primary)'}15`,
-                                            borderColor: `${cat?.color || 'var(--primary)'}25`,
-                                        }}
-                                    >
-                                        <div
-                                            className="w-3 h-3 rounded-full"
-                                            style={{ backgroundColor: cat?.color || 'var(--primary)' }}
-                                        />
+                                <div key={cat.id} className="flex flex-col gap-1.5">
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-12 font-bold" style={{ color }}>{cat.name.toLowerCase()}</span>
+                                        <span className="ml-auto text-10 uppercase tracking-[.3px] text-subtle">{active} días</span>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-semibold text-foreground">{log.eventName}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {log.category} · {log.timestamp?.split(',')[1]?.trim()}
-                                        </p>
-                                    </div>
-                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button
-                                            onClick={() => handleEditLog(log)}
-                                            className="p-1.5 hover:bg-accent rounded-md text-muted-foreground hover:text-primary transition-colors"
-                                        >
-                                            <Edit2 size={13} />
-                                        </button>
-                                        <button
-                                            onClick={() => log.id !== undefined && handleDeleteLog(log.id)}
-                                            className="p-1.5 hover:bg-destructive/10 rounded-md text-muted-foreground hover:text-destructive transition-colors"
-                                        >
-                                            <Trash2 size={13} />
-                                        </button>
-                                    </div>
+                                    <Heatmap data={data} color={color} onDayClick={setViewingDate} />
                                 </div>
                             );
-                        })
-                    ) : (
-                        <div className="py-8 text-center">
-                            <p className="text-sm text-muted-foreground">No hay actividad para este día.</p>
-                            <button
-                                onClick={() => {
-                                    setViewingDate(null);
-                                    if (viewingDate) setSelectedDate(viewingDate);
-                                    setIsLogModalOpen(true);
-                                }}
-                                className="mt-3 text-sm font-semibold text-primary hover:underline"
-                            >
-                                Registrar actividad
-                            </button>
-                        </div>
-                    )}
-                </div>
+                        })}
+                    </div>
+                )}
+            </Sec>
+
+            <Sec
+                accent="var(--v6-violet)"
+                title="actividad"
+                right={<Cmd strong onClick={() => openLogModal()}>+ registrar</Cmd>}
+                comment="// últimos registros"
+            >
+                <LogTable logs={logs} categories={categories} onEdit={handleEditLog} onDelete={setDeleteId} />
+            </Sec>
+
+            {/* ── Detalle del día ─────────────────────────────── */}
+            <Modal
+                isOpen={viewingDate !== null}
+                onClose={() => setViewingDate(null)}
+                title={viewingDate ?? 'día'}
+                comment={`// ${dayLogs.length} ${dayLogs.length === 1 ? 'registro' : 'registros'}`}
+            >
+                {dayLogs.length > 0 ? (
+                    <div className="flex flex-col gap-1.5">
+                        {dayLogs.map(log => {
+                            const color = toPaletteHex(categories.find(c => c.id === log.categoryId)?.color);
+                            return (
+                                <DiffRow key={log.id} color={color}>
+                                    <span className="min-w-0 flex-1 truncate text-12">{log.eventName}</span>
+                                    <span className="flex shrink-0 items-center gap-4">
+                                        <Cmd accent="var(--v6-blue)" onClick={() => handleEditLog(log)}>editar</Cmd>
+                                        <Cmd accent="var(--v6-red)" onClick={() => log.id && setDeleteId(String(log.id))}>borrar</Cmd>
+                                    </span>
+                                </DiffRow>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="flex flex-col gap-2">
+                        <p className="text-11 text-subtle">{'// sin actividad este día'}</p>
+                        <Cmd strong onClick={() => { const d = viewingDate; setViewingDate(null); openLogModal(undefined, d ?? undefined); }}>
+                            registrar aquí
+                        </Cmd>
+                    </div>
+                )}
             </Modal>
 
-            {/* ── Add / Edit Log Modal ─────────────────────────── */}
+            {/* ── Registrar / editar ──────────────────────────── */}
             <Modal
-                isOpen={isLogModalOpen}
-                onClose={() => setIsLogModalOpen(false)}
-                title={editingLogId ? 'Editar Actividad' : 'Registrar Actividad'}
+                isOpen={logModalOpen}
+                onClose={() => setLogModalOpen(false)}
+                title={editingLogId ? 'editar registro' : 'registrar'}
+                comment="// añade uno o varios registros de un hábito"
             >
-                <div className="space-y-5">
-                    {/* Date */}
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fecha</label>
-                        <input
-                            type="date"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            className="h-10 w-full bg-background border border-input rounded-md px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-ring/30 focus:border-ring outline-none transition-all [&::-webkit-calendar-picker-indicator]:opacity-50"
-                        />
-                    </div>
+                <Select
+                    label="hábito"
+                    value={selectedCategory}
+                    onChange={setSelectedCategory}
+                    options={enabled.map(c => ({ value: c.id, label: c.name.toLowerCase(), dot: toPaletteHex(c.color) }))}
+                    placeholder="sin hábitos"
+                />
 
-                    {/* Category */}
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Categoría</label>
-                        <select
-                            value={selectedCategory}
-                            onChange={(e) => setSelectedCategory(e.target.value)}
-                            className="h-10 w-full bg-background border border-input rounded-md px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-ring/30 focus:border-ring outline-none transition-all appearance-none"
-                        >
-                            {categories.filter(c => c.enabled).map(c => (
-                                <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                        </select>
-                    </div>
+                <div className="flex flex-col gap-1">
+                    <Label htmlFor="log-fecha">fecha</Label>
+                    <input id="log-fecha" type="date" value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className={`${inputClass} min-h-[44px] [&::-webkit-calendar-picker-indicator]:opacity-50 [&::-webkit-calendar-picker-indicator]:invert`} />
+                </div>
 
-                    {/* Activations */}
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Activaciones</label>
+                {!editingLogId && (
+                    <div className="flex flex-col gap-1">
+                        <Label right={count === 1 ? '// 1 registro' : `// ${count} registros`}>veces</Label>
                         <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setCount(Math.max(1, count - 1))}
-                                className="h-10 w-10 rounded-md bg-muted hover:bg-accent text-foreground flex items-center justify-center transition-colors text-lg font-medium shrink-0"
-                            >
-                                −
-                            </button>
-                            <div className="flex-1 h-10 bg-primary/10 border border-primary/20 rounded-md flex items-center justify-center">
-                                <span className="text-xl font-semibold text-primary tabular-nums">{count}</span>
+                            <Box accent="var(--v6-dim)" onClick={() => setCount(c => Math.max(1, c - 1))} aria-label="Menos" className="w-11">−</Box>
+                            <div className="flex h-11 flex-1 items-center justify-center rounded border border-border bg-surface text-14 font-bold text-green tabular-nums">
+                                {count}
                             </div>
-                            <button
-                                onClick={() => setCount(count + 1)}
-                                className="h-10 w-10 rounded-md bg-muted hover:bg-accent text-foreground flex items-center justify-center transition-colors text-lg font-medium shrink-0"
-                            >
-                                +
-                            </button>
+                            <Box accent="var(--v6-dim)" onClick={() => setCount(c => c + 1)} aria-label="Más" className="w-11">+</Box>
                         </div>
-                        <p className="text-xs text-muted-foreground">¿Cuántas veces lo completaste hoy?</p>
                     </div>
+                )}
 
-                    {/* Actions */}
-                    <div className="flex gap-2 pt-2 border-t border-border/40">
-                        <button
-                            onClick={handleAddLog}
-                            className="flex-1 h-10 bg-primary text-primary-foreground font-semibold rounded-md text-sm hover:opacity-90 transition-all active:scale-[0.99]"
-                        >
-                            {editingLogId ? 'Guardar cambios' : 'Registrar'}
-                        </button>
-                        <button
-                            onClick={() => setIsLogModalOpen(false)}
-                            className="px-5 h-10 border border-border rounded-md text-sm font-medium text-foreground hover:bg-accent transition-colors"
-                        >
-                            Cancelar
-                        </button>
-                    </div>
+                <div className="flex flex-col gap-1">
+                    <Label htmlFor="log-nota" right="opcional">nota</Label>
+                    <textarea id="log-nota" rows={3} value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        placeholder="¿algo que recordar?"
+                        className={`${inputClass} resize-none placeholder:text-subtle`} />
+                </div>
+
+                <div className="flex items-center gap-4">
+                    <Box onClick={handleSaveLog} className="flex-1">{editingLogId ? 'guardar' : 'registrar'}</Box>
+                    <Cmd accent="var(--v6-dim)" onClick={() => setLogModalOpen(false)}>cancelar</Cmd>
                 </div>
             </Modal>
 
-            {/* ── Delete Confirmation Modal ────────────────────── */}
+            {/* ── Confirmar borrado ───────────────────────────── */}
             <Modal
-                isOpen={deleteConfirmId !== null}
-                onClose={() => setDeleteConfirmId(null)}
-                title="Confirmar eliminación"
+                isOpen={deleteId !== null}
+                onClose={() => setDeleteId(null)}
+                title="borrar registro"
+                comment="// esta acción no se puede deshacer"
+                destructive
             >
-                <div className="space-y-5">
-                    <p className="text-sm text-muted-foreground">
-                        ¿Estás seguro de que quieres eliminar este registro? Esta acción no se puede deshacer.
-                    </p>
-                    <div className="flex gap-2 justify-end">
-                        <button
-                            onClick={() => setDeleteConfirmId(null)}
-                            className="px-4 h-9 rounded-md border border-border text-sm font-medium text-foreground hover:bg-accent transition-colors"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            onClick={confirmDelete}
-                            className="px-4 h-9 rounded-md bg-destructive/10 hover:bg-destructive/20 text-destructive text-sm font-medium transition-colors"
-                        >
-                            Eliminar
-                        </button>
-                    </div>
+                <div className="flex items-center gap-2">
+                    <Box accent="var(--v6-red)" onClick={confirmDelete} className="flex-1">borrar</Box>
+                    <Box accent="var(--v6-dim)" onClick={() => setDeleteId(null)} className="w-28">cancelar</Box>
                 </div>
             </Modal>
-        </>
+        </div>
     );
 };

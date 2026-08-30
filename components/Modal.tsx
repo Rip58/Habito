@@ -1,44 +1,97 @@
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useCallback, useEffect, useId, useRef } from 'react';
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  comment?: string;
+  /** Un popup destructivo cambia el borde a rojo. Es la única señal extra. */
+  destructive?: boolean;
   children: React.ReactNode;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, comment, destructive, children }) => {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+
+  const focusables = useCallback(
+    () => Array.from(panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []),
+    [],
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    (focusables()[0] ?? panelRef.current)?.focus();
+    return () => previouslyFocused?.focus?.();
+  }, [isOpen, focusables]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.stopPropagation(); onClose(); return; }
+      if (e.key !== 'Tab') return;
+      const items = focusables();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || !panelRef.current?.contains(active))) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault(); first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose, focusables]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}
+    >
+      <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
 
-      {/* Panel — centered, rounded-3xl (Finance style) */}
       <div
-        className="modal-enter relative w-full max-w-md bg-card border border-border/60 rounded-3xl shadow-lg flex flex-col overflow-hidden max-h-[90vh]"
-        style={{ boxShadow: '0 1px 3px 0px hsl(0 0% 0% / 0.20), 0 8px 24px -4px hsl(0 0% 0% / 0.30)' }}
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        style={{
+          borderColor: destructive ? 'var(--v6-red)' : 'var(--v6-line)',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+        }}
+        className="relative flex max-h-[90dvh] w-full max-w-[460px] flex-col overflow-y-auto rounded border bg-background p-4 outline-none"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border/40">
-          <h2 className="text-lg font-semibold text-foreground leading-none tracking-tight">{title}</h2>
-          <button
-            onClick={onClose}
-            className="h-8 w-8 rounded-full hover:bg-accent flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground"
-          >
-            <X size={18} />
-          </button>
+        <div className="mb-3.5">
+          <div className="flex items-baseline gap-2 text-13">
+            <span className="text-green">$</span>
+            <h2 id={titleId} className="font-bold text-white">{title}</h2>
+            <button
+              onClick={onClose}
+              aria-label="Cerrar"
+              className="ml-auto text-12 text-subtle hover:text-foreground"
+            >
+              [x]
+            </button>
+          </div>
+          {comment && <p className="mt-0.5 text-11 text-subtle">{comment}</p>}
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {children}
-        </div>
+        <div className="flex flex-col gap-3.5">{children}</div>
       </div>
     </div>
   );

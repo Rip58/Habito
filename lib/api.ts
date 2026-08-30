@@ -6,6 +6,7 @@ export interface Log {
     dateObj: string; // ISO string from server
     eventName: string;
     category: string;
+    categoryId?: string; // clave foránea; el servidor la resuelve por nombre si falta
     intensity: number;
     status: 'COMPLETED' | 'PENDING' | 'FAILED';
 }
@@ -28,6 +29,13 @@ export interface TimerSession {
     note?: string;
 }
 
+export class ApiError extends Error {
+    constructor(message: string, readonly status: number) {
+        super(message);
+        this.name = 'ApiError';
+    }
+}
+
 const BASE = '/api/v1';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -36,14 +44,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         ...options,
     });
     if (!res.ok) {
-        let errorMsg = 'API request failed';
+        let message = res.statusText || 'La petición ha fallado';
         try {
-            const errorData = await res.json();
-            errorMsg = `Server Error (${res.status}): ${errorData.error || res.statusText}`;
+            const body = await res.json();
+            if (body?.error) message = body.error;
         } catch {
-            errorMsg = `Network Error (${res.status}): ${res.statusText}`;
+            /* respuesta sin JSON: nos quedamos con statusText */
         }
-        throw new Error(errorMsg);
+        throw new ApiError(message, res.status);
     }
     return res.json();
 }
@@ -116,4 +124,16 @@ export const api = {
 
     seed: () =>
         request<{ seeded: boolean }>('/seed', { method: 'POST' }),
+
+    auth: {
+        status: () => request<{ authenticated: boolean }>('/auth'),
+
+        login: (pin: string) =>
+            request<{ ok: true }>('/auth', { method: 'POST', body: JSON.stringify({ pin }) }),
+
+        changePin: (currentPin: string, newPin: string) =>
+            request<{ ok: true }>('/auth', { method: 'PUT', body: JSON.stringify({ currentPin, newPin }) }),
+
+        logout: () => request<{ ok: true }>('/auth', { method: 'DELETE' }),
+    },
 };
