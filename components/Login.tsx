@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { Box } from './v6/Button';
+import { Box, Cmd } from './v6/Button';
 
 interface LoginProps {
     onLogin: (pin: string) => void;
@@ -26,6 +26,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin, error, isSubmitting = fal
     };
 
     const complete = pin.every(d => d !== '');
+    const hasInput = pin.some(d => d !== '');
+
+    const clear = () => {
+        setPin(['', '', '', '']);
+        // Tras el repintado: al vaciarse, [limpiar] desaparece y se lleva el
+        // foco consigo, así que enfocar aquí mismo no serviría de nada.
+        requestAnimationFrame(() => inputRefs.current[0]?.focus());
+    };
 
     return (
         <div className="flex min-h-screen flex-col justify-center bg-background p-3.5">
@@ -73,15 +81,22 @@ export const Login: React.FC<LoginProps> = ({ onLogin, error, isSubmitting = fal
                 </div>
 
                 {/* Altura reservada: el mensaje no empuja el layout al aparecer. */}
-                <div className="min-h-[34px]">
-                    {error && (
+                <div className="flex min-h-[44px] items-start gap-3">
+                    {error ? (
                         <div
                             role="alert"
-                            className="rounded border px-2 py-1.5 text-11"
+                            className="flex-1 rounded border px-2 py-1.5 text-11"
                             style={{ borderColor: 'var(--v6-red)', background: 'rgba(232,83,110,0.1)', color: 'var(--v6-red)' }}
                         >
                             {error}
                         </div>
+                    ) : (
+                        <span className="flex-1" />
+                    )}
+                    {hasInput && (
+                        <span className="flex min-h-[44px] shrink-0 items-center">
+                            <Cmd accent="var(--v6-dim)" onClick={clear}>limpiar</Cmd>
+                        </span>
                     )}
                 </div>
 

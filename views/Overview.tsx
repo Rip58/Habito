@@ -33,7 +33,7 @@ const dayKey = (date: Date | string) => {
 export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
     const [logs, setLogs] = useState<ActivityLog[]>([]);
     const [error, setError] = useState<string | null>(null);
-    const [range, setRange] = useState<Range>('3M');
+    const [range, setRange] = useState<Range>('12M');
 
     const [logModalOpen, setLogModalOpen] = useState(false);
     const [editingLogId, setEditingLogId] = useState<string | null>(null);
@@ -199,7 +199,12 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
             <Sec
                 accent="var(--v6-green)"
                 title="hoy"
-                right={`${doneCount}/${enabled.length}`}
+                right={
+                    <span className="flex items-center gap-3">
+                        <span className="tabular-nums">{doneCount}/{enabled.length}</span>
+                        <Cmd strong onClick={() => openLogModal()}>+ registro</Cmd>
+                    </span>
+                }
                 comment={`// ${doneCount} de ${enabled.length} hábitos completados`}
             >
                 {enabled.length === 0 ? (
@@ -237,7 +242,7 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
             </Sec>
 
             <Sec accent="var(--v6-amber)" title="racha" comment="// días consecutivos con al menos un registro">
-                <Stats logs={logs} filter="all" />
+                <Stats logs={logs} categories={categories} />
             </Sec>
 
             <Sec
@@ -282,7 +287,6 @@ export const Overview: React.FC<OverviewProps> = ({ categories = [] }) => {
             <Sec
                 accent="var(--v6-violet)"
                 title="actividad"
-                right={<Cmd strong onClick={() => openLogModal()}>+ registrar</Cmd>}
                 comment="// últimos registros"
             >
                 <LogTable logs={logs} categories={categories} onEdit={handleEditLog} onDelete={setDeleteId} />

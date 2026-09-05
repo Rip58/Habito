@@ -39,23 +39,28 @@ export const Heatmap: React.FC<HeatmapProps> = ({ data, color, onDayClick }) => 
 
     return (
         <div className="flex flex-col gap-1.5">
-            <div className="flex gap-[3px]">
-                {weeks.map((week, w) => (
-                    <div key={w} className="flex flex-1 flex-col gap-[3px]">
-                        {week.map((day, d) => (
-                            <button
-                                key={`${w}-${d}`}
-                                type="button"
-                                disabled={!day}
-                                onClick={() => day && onDayClick?.(day.date)}
-                                title={day ? `${day.date}: ${day.count} ${day.count === 1 ? 'registro' : 'registros'}` : undefined}
-                                aria-label={day ? `${day.date}, ${day.count} registros` : undefined}
-                                style={{ background: day ? cellBackground(day.level, color) : 'transparent' }}
-                                className="aspect-square w-full rounded-sm"
-                            />
-                        ))}
-                    </div>
-                ))}
+            {/* A 12 meses son 53 columnas: en un móvil de 390px la celda caería a
+                unos 3px. Con ancho mínimo la tira se desborda y se desplaza en
+                horizontal, en vez de encogerse hasta ser ilegible. */}
+            <div className="-mx-0.5 overflow-x-auto px-0.5">
+                <div className="flex gap-[3px]">
+                    {weeks.map((week, w) => (
+                        <div key={w} className="flex flex-col gap-[3px]" style={{ flex: '1 0 11px' }}>
+                            {week.map((day, d) => (
+                                <button
+                                    key={`${w}-${d}`}
+                                    type="button"
+                                    disabled={!day}
+                                    onClick={() => day && onDayClick?.(day.date)}
+                                    title={day ? `${day.date}: ${day.count} ${day.count === 1 ? 'registro' : 'registros'}` : undefined}
+                                    aria-label={day ? `${day.date}, ${day.count} registros` : undefined}
+                                    style={{ background: day ? cellBackground(day.level, color) : 'transparent' }}
+                                    className="aspect-square w-full rounded-sm"
+                                />
+                            ))}
+                        </div>
+                    ))}
+                </div>
             </div>
 
             <div className="flex items-center gap-2 text-10 uppercase tracking-[.3px] text-subtle">
